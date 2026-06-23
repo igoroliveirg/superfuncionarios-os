@@ -139,6 +139,7 @@ export const BASE_PACK = {
   // ── 04 · O Construtor de Páginas ────────────────────────────────
   construtor: {
     brandColor: '{cor}', // cor da marca do cliente (interpolada do site)
+    theme: '{theme}',    // 'light' | 'dark' detectado do site (vazio = escuro)
     blocos: [
       { n: 'Hero', d: 'badge + promessa + CTA' },
       { n: 'Prova rápida', d: 'números que sustentam' },

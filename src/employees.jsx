@@ -677,9 +677,11 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
 
   // identidade visual da landing = cor da marca do cliente (validada p/ tema
   // escuro); se não houver cor utilizável, cai no accent do nicho; senão laranja.
+  const light = pack.construtor.theme === 'light' // landing clara segue o site do cliente
   const themed = safeAccent(pack.construtor.brandColor) || safeAccent(pack.accentDefault)
   const la = themed ? themed.accent : accent // acento da landing p/ usos inline
-  const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': themed.grad } : undefined
+  // no tema claro o realce de texto usa a variante mais escura (contraste no branco)
+  const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': light ? themed.accent2 : themed.grad } : undefined
 
   const showBlocos = step > 0
   const showHero = step > 1
@@ -746,7 +748,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
             </div>
           )}
 
-          <div className={`lp dev-${dev}`} style={lpVars}>
+          <div className={`lp dev-${dev} ${light ? 'is-light' : ''}`} style={lpVars}>
             {/* chrome do navegador = único vidro */}
             <div className="lp-chrome">
               <span /><span /><span />

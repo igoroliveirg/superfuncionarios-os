@@ -1651,6 +1651,66 @@ body {
   .lp { transition: none !important; }
 }
 
+/* ── tema CLARO da landing (opt-in via .is-light) ──
+   só overrides; o escuro acima continua o default. As vars de acento
+   (--lp-accent / --lp-accent-2 / --lp-grad) carregam a marca do cliente
+   e NÃO são tocadas aqui. */
+.lp.is-light { background: #ffffff; }
+
+.lp.is-light .lp-chrome {
+  background: linear-gradient(180deg, #f3f4f8, #eef0f4);
+  border-bottom: 1px solid rgba(20,23,31,0.1);
+}
+.lp.is-light .lp-url {
+  background: rgba(20,23,31,0.05);
+  border: 1px solid rgba(20,23,31,0.12);
+  color: rgba(20,23,31,0.66);
+}
+
+.lp.is-light .lp-view {
+  color: #14171f;
+  background:
+    radial-gradient(120% 60% at 50% -8%, color-mix(in srgb, var(--lp-accent) 10%, transparent), transparent 60%),
+    #f7f8fb;
+}
+
+.lp.is-light .lp-avatars img { border-color: #f7f8fb; background: #e7e9ef; }
+
+.lp.is-light .lp-pre { color: rgba(20,23,31,0.66); }
+.lp.is-light .lp-h1 { color: #14171f; }
+.lp.is-light .lp-sub { color: rgba(20,23,31,0.7); }
+.lp.is-light .lp-sub b { color: #14171f; }
+.lp.is-light .lp-cta-note { color: rgba(20,23,31,0.5); }
+
+.lp.is-light .lp-ticker { border-block-color: rgba(20,23,31,0.1); }
+.lp.is-light .lp-tk b { color: #14171f; }
+.lp.is-light .lp-tk span { color: rgba(20,23,31,0.6); }
+
+.lp.is-light .lp-quote {
+  background: rgba(20,23,31,0.035);
+  border-color: rgba(20,23,31,0.1);
+}
+.lp.is-light .lp-quote blockquote { color: rgba(20,23,31,0.9); }
+.lp.is-light .lp-q-id b { color: #14171f; }
+.lp.is-light .lp-q-id span { color: rgba(20,23,31,0.55); }
+
+.lp.is-light .lp-eyebrow { color: var(--lp-accent-2); }
+.lp.is-light .lp-offer-h { color: #14171f; }
+.lp.is-light .lp-includes li { color: rgba(20,23,31,0.82); }
+
+.lp.is-light .lp-guarantee {
+  background: rgba(20,23,31,0.035);
+  border-color: color-mix(in srgb, var(--lp-accent) 22%, transparent);
+}
+.lp.is-light .lp-guarantee b { color: #14171f; }
+.lp.is-light .lp-guarantee span { color: rgba(20,23,31,0.7); }
+
+.lp.is-light .lp-skeleton .sk { background: rgba(20,23,31,0.08); }
+
+.lp.is-light .publish-bar { background: rgba(20,23,31,0.04); }
+.lp.is-light .pub-text > b { color: #14171f; }
+.lp.is-light .pub-checks i { color: rgba(20,23,31,0.6); }
+
 /* ════════════════════════════════════════════════════════════════════
    05 · SOCIAL MEDIA — blocos revelados progressivamente
    ════════════════════════════════════════════════════════════════════ */

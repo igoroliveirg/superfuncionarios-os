@@ -743,6 +743,7 @@ function Shell() {
     empresa: vars.empresa || 'superfuncionarios',
     oferta: vars.oferta || 'a imersão',
     primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
+    theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
   }), [niche, vars])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
@@ -801,7 +802,10 @@ function Shell() {
     const timeout = new Promise((res) => setTimeout(() => res(null), 12000))
     const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
     if (out.niche) setNiche(out.niche)
-    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor })
+    // override de palco: #theme=light|dark força o tema (sites JS podem não expor)
+    const tm = typeof window !== 'undefined' && window.location.hash.match(/theme=(light|dark)/i)
+    const theme = tm ? tm[1].toLowerCase() : (out.theme || 'dark')
+    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor, theme })
     goDesktop()
   }, [])
 

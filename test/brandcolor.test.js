@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { extractBrandColor } from '../server/brandcolor.mjs'
+import { extractBrandColor, extractBrandStyle } from '../server/brandcolor.mjs'
 
 beforeEach(() => { vi.restoreAllMocks() })
 const htmlRes = (html) => ({ ok: true, text: async () => html })
@@ -29,5 +29,24 @@ describe('extractBrandColor', () => {
   it('fetch falha → null', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('net'))
     expect(await extractBrandColor('x.com')).toBeNull()
+  })
+})
+
+describe('extractBrandStyle (tema claro/escuro)', () => {
+  it('fundo claro no body → light', async () => {
+    global.fetch = vi.fn().mockResolvedValue(htmlRes('<style>body{background:#ffffff;color:#111}</style>'))
+    expect((await extractBrandStyle('x.com')).theme).toBe('light')
+  })
+  it('fundo escuro no body → dark', async () => {
+    global.fetch = vi.fn().mockResolvedValue(htmlRes('<style>body{background:#0e0a18;color:#fff}</style>'))
+    expect((await extractBrandStyle('x.com')).theme).toBe('dark')
+  })
+  it('meta color-scheme dark → dark', async () => {
+    global.fetch = vi.fn().mockResolvedValue(htmlRes('<meta name="color-scheme" content="dark"><style>.x{color:#1aab2c}</style>'))
+    expect((await extractBrandStyle('x.com')).theme).toBe('dark')
+  })
+  it('sem sinal claro de escuro → light (maioria dos sites)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(htmlRes('<div>conteudo</div>'))
+    expect((await extractBrandStyle('x.com')).theme).toBe('light')
   })
 })
