@@ -742,7 +742,7 @@ function Shell() {
   const pack = useMemo(() => resolvePack(niche, {
     empresa: vars.empresa || 'superfuncionarios',
     oferta: vars.oferta || 'a imersão',
-    primaryColor: vars.primaryColor || '#ff8a3c',
+    primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
   }), [niche, vars])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)

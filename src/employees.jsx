@@ -1,6 +1,7 @@
 import React from 'react'
 import { Typewriter, CountUp, Section, fmt } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
+import { safeAccent } from './niches/color.js'
 
 // ── Metadados dos 5 super funcionários ───────────────────────────────
 // color = neon de assinatura (glows, dots, bordas) · ink = variante escura
@@ -674,6 +675,12 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
 
   const { blocos, ticker, depoimentos, countdown, hero, includes, offer } = pack.construtor
 
+  // identidade visual da landing = cor da marca do cliente (validada p/ tema
+  // escuro); se não houver cor utilizável, cai no accent do nicho; senão laranja.
+  const themed = safeAccent(pack.construtor.brandColor) || safeAccent(pack.accentDefault)
+  const la = themed ? themed.accent : accent // acento da landing p/ usos inline
+  const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': themed.grad } : undefined
+
   const showBlocos = step > 0
   const showHero = step > 1
   const showProva = step > 2
@@ -739,7 +746,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
             </div>
           )}
 
-          <div className={`lp dev-${dev}`}>
+          <div className={`lp dev-${dev}`} style={lpVars}>
             {/* chrome do navegador = único vidro */}
             <div className="lp-chrome">
               <span /><span /><span />
@@ -803,7 +810,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
                         <span className="lp-q-mark" aria-hidden="true">“</span>
                         <blockquote>{d.txt}</blockquote>
                         <figcaption>
-                          <span className="lp-q-av" style={{ background: `linear-gradient(135deg, ${accent}, #ff3b30)` }}>
+                          <span className="lp-q-av" style={{ background: `linear-gradient(135deg, ${la}, ${themed ? themed.accent2 : '#ff3b30'})` }}>
                             {d.nome[0]}
                           </span>
                           <span className="lp-q-id">
@@ -824,7 +831,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
                   <h2 className="lp-offer-h">{offer.hPre}<span className="lp-grad">{offer.hGrad}</span>{offer.hPost}</h2>
                   <ul className="lp-includes">
                     {includes.map((t, i) => (
-                      <li key={i} style={{ '--ri': i }}><span className="lp-ck" style={{ color: accent }}>✓</span>{t}</li>
+                      <li key={i} style={{ '--ri': i }}><span className="lp-ck" style={{ color: la }}>✓</span>{t}</li>
                     ))}
                   </ul>
 
@@ -855,15 +862,15 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
 
           {/* barra de publicação */}
           {showPublicado && (
-            <div className="publish-bar reveal" style={{ borderColor: accent }}>
-              <span className="pub-dot" style={{ background: accent, boxShadow: `0 0 10px ${accent}` }} />
+            <div className="publish-bar reveal" style={{ borderColor: la }}>
+              <span className="pub-dot" style={{ background: la, boxShadow: `0 0 10px ${la}` }} />
               <div className="pub-text">
                 <b style={{ color: ink }}>Publicado · no ar em 24h</b>
                 <span className="pub-checks">
                   <i>✓ domínio</i><i>✓ pixel</i><i>✓ formulário no funil</i><i>✓ SSL</i>
                 </span>
               </div>
-              <a className="pub-link" style={{ borderColor: accent, color: ink }} href={`https://${site}`} onClick={(e) => e.preventDefault()}>
+              <a className="pub-link" style={{ borderColor: la, color: la }} href={`https://${site}`} onClick={(e) => e.preventDefault()}>
                 Abrir página →
               </a>
             </div>

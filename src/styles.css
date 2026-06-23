@@ -1421,6 +1421,11 @@ body {
 
 /* ── moldura da landing (chrome = único vidro) ── */
 .lp {
+  /* acento da landing: default = laranja do Construtor; sobrescrito inline
+     com a cor da marca do cliente quando há uma cor utilizável */
+  --lp-accent: #ff8a3c;
+  --lp-accent-2: #ff3b30;
+  --lp-grad: #ff9a52;
   border-radius: var(--r-lg); overflow: hidden;
   border: 1px solid var(--glass-hairline);
   box-shadow: var(--glass-shadow);
@@ -1455,7 +1460,7 @@ body {
   position: relative; isolation: isolate;
   padding: 30px 28px; color: rgba(255,255,255,0.78);
   background:
-    radial-gradient(120% 60% at 50% -8%, rgba(255,138,60,0.10), transparent 60%),
+    radial-gradient(120% 60% at 50% -8%, color-mix(in srgb, var(--lp-accent) 10%, transparent), transparent 60%),
     #0e0a18;
   max-height: 540px; overflow-y: auto; scrollbar-width: thin;
 }
@@ -1463,7 +1468,7 @@ body {
 .lp-glow {
   position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(60% 40% at 50% 12%, rgba(255,138,60,0.16), transparent 64%),
+    radial-gradient(60% 40% at 50% 12%, color-mix(in srgb, var(--lp-accent) 16%, transparent), transparent 64%),
     radial-gradient(50% 38% at 92% 96%, rgba(155,107,255,0.10), transparent 66%);
 }
 
@@ -1473,8 +1478,8 @@ body {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 11px; font-weight: 700; letter-spacing: 0.01em; color: #fff;
   padding: 6px 14px; border-radius: var(--r-pill);
-  background: linear-gradient(90deg, #ff8a3c, #ff3b30);
-  box-shadow: 0 6px 22px -10px rgba(255,59,48,0.7);
+  background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2));
+  box-shadow: 0 6px 22px -10px color-mix(in srgb, var(--lp-accent-2) 70%, transparent);
 }
 .lp-badge i { font-style: normal; color: rgba(255,255,255,0.55); }
 .lp-pre {
@@ -1496,7 +1501,7 @@ body {
 }
 .lp.dev-mobile .lp-h1 { font-size: 21px; }
 /* realce laranja sólido (sem gradient-text — AA sobre #0e0a18) */
-.lp-grad { color: #ff9a52; font-weight: 800; }
+.lp-grad { color: var(--lp-grad); font-weight: 800; }
 .lp-sub {
   margin: 14px auto 0; max-width: 46ch; font-size: 14px; line-height: 1.55;
   color: rgba(255,255,255,0.74);
@@ -1509,8 +1514,8 @@ body {
   display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
   font-size: 14px; font-weight: 800; letter-spacing: 0.01em; color: #fff;
   padding: 14px 28px; border: none; border-radius: var(--r-pill);
-  background: linear-gradient(90deg, #ff8a3c, #ff3b30);
-  box-shadow: 0 14px 36px -12px rgba(255,59,48,0.65);
+  background: linear-gradient(90deg, var(--lp-accent), var(--lp-accent-2));
+  box-shadow: 0 14px 36px -12px color-mix(in srgb, var(--lp-accent-2) 65%, transparent);
   transition: transform 0.14s var(--e-quart);
 }
 .lp-cta:active { transform: scale(0.97); }
