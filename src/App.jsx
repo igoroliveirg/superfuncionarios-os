@@ -735,7 +735,15 @@ function Shell() {
   const [presenting, setPresenting] = useState(() =>
     typeof window !== 'undefined' && /present/i.test(window.location.hash))
   const prevPhaseRef = useRef('boot')
-  const pack = useMemo(() => resolvePack('generico', { empresa: 'superfuncionarios' }), [])
+  const [niche, setNiche] = useState('generico')
+  const [vars, setVars] = useState({})
+  const identifyRef = useRef(null)
+  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio)
+  const pack = useMemo(() => resolvePack(niche, {
+    empresa: vars.empresa || 'superfuncionarios',
+    oferta: vars.oferta || 'a imersão',
+    primaryColor: vars.primaryColor || '#ff8a3c',
+  }), [niche, vars])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -773,14 +781,38 @@ function Shell() {
     setTimeout(() => setPhase('desktop'), 400) // = stageOutFade
   }
 
+  // ao analisar o site: dispara a identificação do nicho (1 chamada real) por
+  // baixo da animação que já existe. Override de palco: #niche=<id> pula a chamada.
+  const startAnalyze = useCallback((url) => {
+    setSite(url)
+    setPhase('analyze')
+    const m = typeof window !== 'undefined' && window.location.hash.match(/niche=([a-z]+)/i)
+    if (m) {
+      identifyRef.current = Promise.resolve({ niche: m[1].toLowerCase() })
+    } else {
+      identifyRef.current = fetch('/api/identify', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
+      }).then((r) => r.json()).catch(() => ({ niche: 'generico' }))
+    }
+  }, [])
+
+  // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
+  const finalize = useCallback(async () => {
+    const timeout = new Promise((res) => setTimeout(() => res(null), 8000))
+    const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
+    if (out.niche) setNiche(out.niche)
+    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor })
+    goDesktop()
+  }, [])
+
   // durante a saída do boot, já montamos o onboarding por baixo (push-in sem corte)
   const showOnboarding = ONBOARDING.includes(phase) || (phase === 'boot' && bootLeaving)
   const obPhase = phase === 'boot' ? 'connect' : phase
 
   let card = null
   if (obPhase === 'connect') card = <ConnectScreen onDone={() => setPhase('site')} />
-  else if (obPhase === 'site') card = <SiteScreen onAnalyze={(u) => { setSite(u); setPhase('analyze') }} />
-  else if (obPhase === 'analyze') card = <AnalyzeScreen site={site} onDone={goDesktop} />
+  else if (obPhase === 'site') card = <SiteScreen onAnalyze={startAnalyze} />
+  else if (obPhase === 'analyze') card = <AnalyzeScreen site={site} onDone={finalize} />
 
   return (
     <div className="app">
