@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
 import { useAgentChat, ChatPanel } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
+import { resolvePack } from './niches/index.js'
 
 // Marca da Super Funcionários: três barras (eco do favicon do GDIA)
 function Mark() {
@@ -309,7 +310,7 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 //  DESKTOP
 // ════════════════════════════════════════════════════════════════════
 
-function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen }) {
+function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack }) {
   const { ref, flyToDock } = useGenieWindow(origin)
   const chat = useAgentChat(SCRIPTS[emp.id]) // conversa viva do agente ativo
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
@@ -377,7 +378,7 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen 
         </div>
       </div>
       <div className="window-body has-chat" ref={bodyRef}>
-        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} />
+        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} />
       </div>
       <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} />
     </div>
@@ -648,7 +649,7 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
   )
 })
 
-function Desktop({ site, onPresent }) {
+function Desktop({ site, onPresent, pack }) {
   const [activeId, setActiveId] = useState('pesquisa') // janela única (ou null)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
@@ -701,6 +702,7 @@ function Desktop({ site, onPresent }) {
             onClose={close}
             onMinimize={close}
             onOpen={open}
+            pack={pack}
           />
         )}
         {isRotinas && (
@@ -733,6 +735,15 @@ function Shell() {
   const [presenting, setPresenting] = useState(() =>
     typeof window !== 'undefined' && /present/i.test(window.location.hash))
   const prevPhaseRef = useRef('boot')
+  const [niche, setNiche] = useState('generico')
+  const [vars, setVars] = useState({})
+  const identifyRef = useRef(null)
+  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio)
+  const pack = useMemo(() => resolvePack(niche, {
+    empresa: vars.empresa || 'superfuncionarios',
+    oferta: vars.oferta || 'a imersão',
+    primaryColor: vars.primaryColor || '#ff8a3c',
+  }), [niche, vars])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -770,14 +781,38 @@ function Shell() {
     setTimeout(() => setPhase('desktop'), 400) // = stageOutFade
   }
 
+  // ao analisar o site: dispara a identificação do nicho (1 chamada real) por
+  // baixo da animação que já existe. Override de palco: #niche=<id> pula a chamada.
+  const startAnalyze = useCallback((url) => {
+    setSite(url)
+    setPhase('analyze')
+    const m = typeof window !== 'undefined' && window.location.hash.match(/niche=([a-z]+)/i)
+    if (m) {
+      identifyRef.current = Promise.resolve({ niche: m[1].toLowerCase() })
+    } else {
+      identifyRef.current = fetch('/api/identify', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
+      }).then((r) => r.json()).catch(() => ({ niche: 'generico' }))
+    }
+  }, [])
+
+  // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
+  const finalize = useCallback(async () => {
+    const timeout = new Promise((res) => setTimeout(() => res(null), 8000))
+    const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
+    if (out.niche) setNiche(out.niche)
+    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor })
+    goDesktop()
+  }, [])
+
   // durante a saída do boot, já montamos o onboarding por baixo (push-in sem corte)
   const showOnboarding = ONBOARDING.includes(phase) || (phase === 'boot' && bootLeaving)
   const obPhase = phase === 'boot' ? 'connect' : phase
 
   let card = null
   if (obPhase === 'connect') card = <ConnectScreen onDone={() => setPhase('site')} />
-  else if (obPhase === 'site') card = <SiteScreen onAnalyze={(u) => { setSite(u); setPhase('analyze') }} />
-  else if (obPhase === 'analyze') card = <AnalyzeScreen site={site} onDone={goDesktop} />
+  else if (obPhase === 'site') card = <SiteScreen onAnalyze={startAnalyze} />
+  else if (obPhase === 'analyze') card = <AnalyzeScreen site={site} onDone={finalize} />
 
   return (
     <div className="app">
@@ -807,7 +842,7 @@ function Shell() {
         />
       )}
 
-      {phase === 'desktop' && <Desktop site={site} onPresent={startPresent} />}
+      {phase === 'desktop' && <Desktop site={site} onPresent={startPresent} pack={pack} />}
 
       {presenting && (
         <Presentation site={site || 'superfuncionarios.ai'} onExit={stopPresent} />

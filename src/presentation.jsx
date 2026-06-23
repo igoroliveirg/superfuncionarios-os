@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
 import { PresentationCtx } from './chat.jsx'
+import { resolvePack } from './niches/index.js'
+
+const PACK = resolvePack('generico', { empresa: 'superfuncionarios' })
 
 const prefersReduced = () =>
   typeof window !== 'undefined' && window.matchMedia &&
@@ -279,7 +282,7 @@ function AgentSlide({ id, step, chip, reply, site }) {
       <p className="ps-say">{reply}</p>
       <div className="ps-card-body" ref={bodyRef}>
         <PresentationCtx.Provider value={true}>
-          <EmployeeContent id={id} accent={emp.color} ink={emp.ink} site={site} step={step} />
+          <EmployeeContent id={id} accent={emp.color} ink={emp.ink} site={site} step={step} pack={PACK} />
         </PresentationCtx.Provider>
       </div>
     </div>
