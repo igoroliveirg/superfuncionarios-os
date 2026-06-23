@@ -12,6 +12,7 @@ export const BASE_PACK = {
       idade: 43,
       contexto: 'Dono de empresa de serviço · São Paulo',
       fat: 'R$ 180 mil/mês',
+      fatLabel: 'faturamento',
       time: '2 vendedores + 1 SDR',
       traits: [
         'Quer escalar sem virar refém da indicação',

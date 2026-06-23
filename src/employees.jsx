@@ -153,7 +153,7 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
               <span className="persona-ctx">{persona.contexto}</span>
             </div>
             <div className="persona-meta">
-              <span className="pm"><b style={{ color: ink }}>{persona.fat}</b> faturamento</span>
+              <span className="pm"><b style={{ color: ink }}>{persona.fat}</b> {persona.fatLabel}</span>
               <span className="pm-sep" />
               <span className="pm"><b style={{ color: ink }}>{persona.time}</b></span>
             </div>
