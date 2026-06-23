@@ -148,6 +148,15 @@ export function buildClass(phase) {
   return `bb is-${phase}`
 }
 
+// agenda de ondas da grade — pura e testável. Devolve a contagem cumulativa de
+// tiles visíveis ao fim de cada onda. Ex.: 9 tiles em 3 ondas → [3, 6, 9].
+export function gridWaveCounts(total, waves) {
+  const per = Math.max(1, Math.ceil(total / Math.max(1, waves)))
+  const out = []
+  for (let w = 1; (w - 1) * per < total; w++) out.push(Math.min(total, w * per))
+  return out
+}
+
 // timeline por beat (~1,4s, dentro do range travado 1,2–1,8s)
 const BB_T = { skeleton: 280, fill: 420, hold: 600, lock: 200 }
 
@@ -206,9 +215,13 @@ export function BuildBlock({ beat = 0, className = '', children, onLocked, as: T
 // Todos leem o estado do bloco (BBPhaseCtx) e a cor do cliente via --bb-accent
 // /--bb-ink/--bb-bone do contexto CSS. A curva é sempre --e-quart.
 
-// texto/headline brandado: reveal de linha inteira (bone→ink), nunca char-a-char
+// texto/headline brandado: reveal de linha inteira (bone→ink), nunca char-a-char.
+// Lê o estado do bloco: só fica "bone" durante o skeleton; fora dele (ou solto,
+// sem BuildBlock em volta) renderiza em ink já legível.
 function BBLine({ children, className = '', as: Tag = 'div' }) {
-  return <Tag className={`bb-line ${className}`}>{children}</Tag>
+  const phase = useContext(BBPhaseCtx)
+  const bone = phase === 'skeleton'
+  return <Tag className={`bb-line ${bone ? 'is-bone' : 'is-ink'} ${className}`}>{children}</Tag>
 }
 
 // barras com snap-lock: cresce a 80%, hold, trava (sem scaleX sub-pixel, sem glow)
@@ -266,7 +279,7 @@ function BBImage({ src, alt = '', fallbackNiche, className = '' }) {
 function BBGrid({ tiles = [], waves = 3, cadence = 600, className = '' }) {
   const reduce = prefersReduced()
   const total = tiles.length
-  const per = Math.max(1, Math.ceil(total / waves))
+  const schedule = useMemo(() => gridWaveCounts(total, waves), [total, waves])
   const [shown, setShown] = useState(reduce ? total : 0)
   const fillAll = useCallback(() => setShown(total), [total])
   useEffect(() => {
@@ -274,19 +287,25 @@ function BBGrid({ tiles = [], waves = 3, cadence = 600, className = '' }) {
     setShown(0)
     let w = 0
     const id = setInterval(() => {
+      setShown(schedule[Math.min(w, schedule.length - 1)])
       w += 1
-      setShown(Math.min(total, w * per))
-      if (w * per >= total) clearInterval(id)
+      if (w >= schedule.length) clearInterval(id)
     }, cadence)
     return () => clearInterval(id)
-  }, [total, per, cadence, reduce])
+  }, [schedule, total, cadence, reduce])
   return (
     <div className={`bb-grid ${className}`} onClick={fillAll}>
-      {tiles.map((t, i) => (
-        <div className={`bb-tile ${i < shown ? 'is-on' : 'is-bone'}`} key={t.id ?? i}>
-          {i < shown && t.src && <img src={t.src} alt={t.alt || ''} />}
-        </div>
-      ))}
+      {tiles.map((t, i) => {
+        const on = i < shown
+        const branded = on && !t.src // tile mockup brandado (cor do cliente + selo)
+        return (
+          <div className={`bb-tile ${on ? 'is-on' : 'is-bone'} ${branded ? 'is-branded' : ''}`} key={t.id ?? i}>
+            {on && (t.src
+              ? <img src={t.src} alt={t.alt || ''} />
+              : <span className="bb-tile-seal" aria-hidden="true">{t.label || ''}</span>)}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Typewriter, CountUp, Section, fmt } from './chat.jsx'
+import { Typewriter, CountUp, Section, fmt, BuildBlock } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
 import { safeAccent } from './niches/color.js'
 
@@ -951,11 +951,11 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
 
       <div className="insight-strip">
         <div className="insight">
-          <span className="insight-v" style={{ color: ink }}><CountUp to={4} format={fmt.int} /></span>
+          <span className="insight-v" style={{ color: ink }}><BuildBlock.Tally to={4} format={fmt.int} /></span>
           <span className="insight-l">pilares de conteúdo</span>
         </div>
         <div className="insight">
-          <span className="insight-v" style={{ color: ink }}><CountUp to={30} format={fmt.int} /></span>
+          <span className="insight-v" style={{ color: ink }}><BuildBlock.Tally to={30} format={fmt.int} /></span>
           <span className="insight-l">posts orgânicos no mês</span>
         </div>
         <div className="insight">
@@ -982,7 +982,7 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
                 <div className="pillar-top">
                   <span className="pillar-name">{p.nome}</span>
                   <span className="pillar-share" style={{ color: ink }}>
-                    {has(0) ? <CountUp to={p.share} format={fmt.int} /> : p.share}%
+                    {has(0) ? <BuildBlock.Tally to={p.share} format={fmt.int} /> : p.share}%
                   </span>
                 </div>
                 <div className="pillar-track">
@@ -1005,7 +1005,7 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
                  style={{ '--hi': i, '--social': accent, borderColor: g.top ? accent : 'var(--line)' }}>
               <span className="hook-quote" aria-hidden="true" style={{ color: accent }}>“</span>
               <div className="hook-main">
-                <p className="hook-txt">{i === 0 ? <Typewriter text={g.txt} /> : g.txt}</p>
+                <BuildBlock.Line as="p" className="hook-txt">{g.txt}</BuildBlock.Line>
                 <div className="hook-meta">
                   <span className="hook-pilar" style={{ borderColor: accent, color: ink }}>{g.pilar}</span>
                   <span className="hook-ret">
@@ -1013,7 +1013,7 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
                       <span className={`hook-ret-fill ${has(1) ? 'building' : ''}`}
                             style={{ width: `${g.ret}%`, background: accent }} />
                     </span>
-                    <b style={{ color: ink }}>{has(1) ? <CountUp to={g.ret} format={fmt.int} /> : g.ret}%</b> retenção est.
+                    <b style={{ color: ink }}>{has(1) ? <BuildBlock.Tally to={g.ret} format={fmt.int} /> : g.ret}%</b> retenção est.
                   </span>
                 </div>
               </div>
@@ -1031,8 +1031,7 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
               <div className="cal-day">{dias[i]}</div>
               <div className={`cal-card ${i === 0 && has(3) ? 'is-open' : ''}`}
                    style={i === 0 && has(3) ? { borderColor: accent } : null}>
-                <div className="cal-thumb"
-                     style={{ background: `linear-gradient(135deg, ${accent}, ${accent}55)` }}>
+                <div className="cal-thumb" style={{ background: accent }}>
                   <span className="cal-type">{p.tipo}</span>
                 </div>
                 <p className="cal-txt">{p.txt}</p>
@@ -1072,9 +1071,7 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
               </span>
             </div>
             <div className="pd-label">Legenda</div>
-            <div className="pd-text">
-              {step === 5 ? <Typewriter text={legenda} durationMs={1400} /> : legenda}
-            </div>
+            <BuildBlock.Line className="pd-text">{legenda}</BuildBlock.Line>
             <div className="pd-label">Hashtags</div>
             <div className="pd-tags">
               {tags.map((t, i) => (
@@ -1085,6 +1082,15 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
         </div>
         <SectionTitle accent={accent}>Como vai aparecer no feed</SectionTitle>
         <FeedPreview accent={accent} ink={ink} caption={legenda} tags={tags} type={open.tipo} igUser={igUser} />
+        <SectionTitle accent={accent}>Seu feed enchendo no mês</SectionTitle>
+        <div className="ig-profile-grid" style={{ '--bb-accent': accent }}>
+          <BuildBlock.Grid
+            waves={3}
+            cadence={620}
+            tiles={Array.from({ length: 9 }, (_, i) => ({ id: i, label: pilares[i % pilares.length].ic }))}
+          />
+          <p className="grid-hint muted">30 posts na fila · 3 ondas de 3 · clique pra preencher tudo</p>
+        </div>
       </Section>
 
       {/* turn 5 · plano do mês fechado (encerra o fluxo) */}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildReducer, tallyValues, buildClass, BUILD_STOPS } from '../src/chat.jsx'
+import { buildReducer, tallyValues, buildClass, BUILD_STOPS, gridWaveCounts } from '../src/chat.jsx'
 
 describe('buildReducer (máquina idle→skeleton→fill→locked)', () => {
   it('segue a ordem dos estados', () => {
@@ -58,5 +58,25 @@ describe('buildClass', () => {
   it('mapeia o estado pra classe do bloco', () => {
     expect(buildClass('skeleton')).toBe('bb is-skeleton')
     expect(buildClass('locked')).toBe('bb is-locked')
+  })
+})
+
+describe('gridWaveCounts (vitrine enche em ondas)', () => {
+  it('9 tiles em 3 ondas → 3, 6, 9 (3 por onda)', () => {
+    expect(gridWaveCounts(9, 3)).toEqual([3, 6, 9])
+  })
+  it('a última onda crava o total exato (nunca passa)', () => {
+    const c = gridWaveCounts(10, 3)
+    expect(c[c.length - 1]).toBe(10)
+    expect(c).toEqual([4, 8, 10])
+  })
+  it('cobre todos os tiles e é monotônico', () => {
+    const c = gridWaveCounts(9, 3)
+    expect(c[c.length - 1]).toBe(9)
+    for (let i = 1; i < c.length; i++) expect(c[i]).toBeGreaterThan(c[i - 1])
+  })
+  it('degrada com segurança (0 tiles, 0 ondas)', () => {
+    expect(gridWaveCounts(0, 3)).toEqual([])
+    expect(gridWaveCounts(9, 0)).toEqual([9])
   })
 })

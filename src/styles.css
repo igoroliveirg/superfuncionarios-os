@@ -1898,8 +1898,10 @@ body {
   height: 4px; border-radius: 99px; margin: 7px 0 8px;
   background: color-mix(in srgb, var(--social) 14%, #fff); overflow: hidden;
 }
-.pillar-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; }
-.pillar-fill.building { animation: meterGrow 0.7s var(--e-quart) both; }
+.pillar-fill { display: block; height: 100%; border-radius: 99px; }
+/* snap-lock: reveal por clip-path quantizado (5 passos), não scaleX sub-pixel.
+   A largura final é a inline; o clip revela da esquerda em frames discretos. */
+.pillar-fill.building { animation: bbBarReveal 0.5s steps(5, end) both; }
 .pillar-ex { font-size: 12px; line-height: 1.45; color: #2c2c30; }
 
 /* ═══ BANCO DE GANCHOS (hooks) ═════════════════════════════════════ */
@@ -1926,8 +1928,9 @@ body {
   width: 64px; height: 4px; border-radius: 99px; overflow: hidden;
   background: color-mix(in srgb, var(--social) 14%, #fff); flex: 0 0 auto;
 }
-.hook-ret-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; }
-.hook-ret-fill.building { animation: meterGrow 0.7s var(--e-quart) 0.1s both; }
+.hook-ret-fill { display: block; height: 100%; border-radius: 99px; }
+.hook-ret-fill.building { animation: bbBarReveal 0.5s steps(5, end) 0.1s both; }
+@keyframes bbBarReveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 
 /* pilar dentro do card do calendário */
 .cal-pilar {
@@ -2365,9 +2368,11 @@ body {
    sob bitrate baixo). O bloco congela. */
 .bb.is-locked { border: 2px solid var(--bb-accent); border-radius: var(--r-sm); }
 
-/* texto/headline: reveal de linha inteira, bone→ink em 360ms (nunca char-a-char) */
-.bb-line { color: var(--bb-bone); transition: color 0.36s var(--e-quart); }
-.bb.is-fill .bb-line, .bb.is-locked .bb-line { color: var(--bb-ink); }
+/* texto/headline: reveal de linha inteira, bone→ink em 360ms (nunca char-a-char).
+   Só fica bone durante o skeleton; solto (sem BuildBlock) já nasce em ink legível. */
+.bb-line { transition: color 0.36s var(--e-quart); }
+.bb-line.is-bone { color: var(--bb-bone); }
+.bb-line.is-ink { color: var(--bb-ink); }
 
 /* barras snap-lock: cresce por custom-prop (sem scaleX sub-pixel, sem box-shadow) */
 .bb-bars { display: flex; flex-direction: column; gap: 8px; }
@@ -2398,6 +2403,14 @@ body {
 .bb-tile.is-on { animation: bbTileIn 0.3s var(--e-quart) forwards; }
 .bb-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 @keyframes bbTileIn { from { opacity: 0; } to { opacity: 1; } }
+/* tile mockup brandado: cor sólida do cliente + selo (sem imagem falsa) */
+.bb-tile.is-branded { background: var(--bb-accent); display: flex; align-items: center; justify-content: center; }
+.bb-tile-seal { font-size: clamp(14px, 4vw, 24px); line-height: 1; color: #fff; opacity: 0.95; text-align: center; }
+.bb-grid { cursor: pointer; }
+/* grade de perfil do Criador (vitrine que enche em 3 ondas) */
+.ig-profile-grid { max-width: 340px; margin: 4px auto 0; }
+.ig-profile-grid .bb-grid { gap: 6px; }
+.grid-hint { text-align: center; font-size: 11.5px; margin-top: 10px; }
 
 /* reduced-motion / Modo demo: o build já é discreto e codec-friendly; só zeramos
    as transições residuais pra cada hold virar frame estático de verdade. */
