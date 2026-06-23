@@ -162,6 +162,7 @@ export const BASE_PACK = {
       { v: '38', l: 'min' }, { v: '52', l: 'seg' },
     ],
     hero: {
+      showAvatars: true,
       badge: ['Imersão presencial', '3 dias', 'São Paulo'],
       pre: 'Para empresários que faturam a partir de R$ 130 mil/mês',
       h1Typed: 'Crie 5 Super Funcionários de IA que entregam pro seu vendedor só contato pronto pra comprar',

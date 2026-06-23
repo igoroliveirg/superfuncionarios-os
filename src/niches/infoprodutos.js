@@ -38,12 +38,39 @@ export const INFOPRODUTOS = {
   },
   construtor: {
     hero: {
+      showAvatars: false,
+      badge: ['Turma com vagas', 'Online', 'Comece hoje'],
+      pre: 'Para quem quer sair da teoria e aplicar de verdade',
       h1Typed: 'Aprenda o método de {empresa} e saia com a primeira entrega pronta em 30 dias',
       h1Pre: 'Aprenda o método de ',
       h1Grad: '{empresa}',
       h1Post: ' e saia com a primeira entrega pronta em 30 dias',
+      sub: 'Você assiste, aplica e sai da aula 1 com a primeira entrega na mão. Sem enrolação.',
+      cta: 'QUERO COMEÇAR',
+      ctaNote: '2 min pra se inscrever',
     },
-    offer: { hPre: 'Você sai com ', hGrad: 'a primeira entrega', hPost: ' rodando, não só com teoria' },
+    ticker: [
+      { v: '+2 mil', l: 'alunos formados' },
+      { v: '4,9★', l: 'avaliação dos alunos' },
+      { v: '30 dias', l: 'até a primeira entrega' },
+    ],
+    depoimentos: [
+      { nome: 'Juliana M.', cargo: 'Aluna · 2ª turma', txt: 'Saí da primeira aula com a entrega pronta. Nunca tinha acontecido.' },
+      { nome: 'Rafael T.', cargo: 'Aluno', txt: 'Parei de colecionar curso. Aqui eu apliquei de verdade.' },
+      { nome: 'Bianca S.', cargo: 'Aluna', txt: 'O método cabe na minha rotina. Em 30 dias já tinha resultado.' },
+    ],
+    includes: [
+      'O método completo, passo a passo',
+      'Comunidade pra tirar dúvida quando travar',
+      'Templates prontos pra aplicar no mesmo dia',
+      'Acompanhamento até a sua primeira entrega',
+    ],
+    offer: {
+      eyebrow: 'A formação',
+      hPre: 'Você sai com ', hGrad: 'a primeira entrega', hPost: ' pronta, não só com teoria',
+      cdLab: 'As vagas da turma fecham em', cdWhen: 'Turma atual', cdFoot: 'Vagas limitadas por turma',
+      guaranteeTitle: 'Garantia de 7 dias', guaranteeText: 'Não curtiu? Reembolso em 7 dias, sem burocracia.',
+    },
   },
   conteudo: {
     pilares: [

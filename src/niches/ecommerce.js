@@ -38,12 +38,39 @@ export const ECOMMERCE = {
   },
   construtor: {
     hero: {
+      showAvatars: false,
+      badge: ['Frete grátis', 'Troca fácil', 'Entrega rápida'],
+      pre: 'Para quem quer comprar sem medo e sem surpresa no frete',
       h1Typed: 'Compre na {empresa} com prazo claro, frete justo e avaliação real de quem já recebeu',
       h1Pre: 'Compre na ',
       h1Grad: '{empresa}',
       h1Post: ' com prazo claro, frete justo e avaliação real de quem já recebeu',
+      sub: 'Prazo e frete na cara desde o anúncio. Troca fácil. Do clique à sua porta.',
+      cta: 'VER OFERTAS',
+      ctaNote: 'Compra segura',
     },
-    offer: { hPre: 'Você fecha ', hGrad: 'a compra em 1 minuto', hPost: ', com frete e prazo na cara' },
+    ticker: [
+      { v: '+50 mil', l: 'pedidos entregues' },
+      { v: '4,8★', l: 'avaliação dos clientes' },
+      { v: '24h', l: 'pra postar o pedido' },
+    ],
+    depoimentos: [
+      { nome: 'Lucas P.', cargo: 'Cliente', txt: 'Chegou antes do prazo e bem embalado. Voltei a comprar.' },
+      { nome: 'Marina C.', cargo: 'Cliente', txt: 'Frete justo e troca sem dor de cabeça. Confiança total.' },
+      { nome: 'Diego F.', cargo: 'Cliente', txt: 'As avaliações batem com o que recebi. Loja séria.' },
+    ],
+    includes: [
+      'Frete calculado e claro antes de pagar',
+      'Troca e devolução fácil em 7 dias',
+      'Rastreamento do pedido até a porta',
+      'Pagamento seguro e parcelado',
+    ],
+    offer: {
+      eyebrow: 'A oferta',
+      hPre: 'Você fecha ', hGrad: 'a compra em 1 minuto', hPost: ', com frete e prazo na cara',
+      cdLab: 'A oferta acaba em', cdWhen: 'Promoção desta semana', cdFoot: 'Estoque limitado',
+      guaranteeTitle: 'Compra 100% garantida', guaranteeText: 'Não recebeu ou não gostou? Devolução fácil em 7 dias.',
+    },
   },
   conteudo: {
     pilares: [

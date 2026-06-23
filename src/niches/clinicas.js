@@ -38,12 +38,39 @@ export const CLINICAS = {
   },
   construtor: {
     hero: {
+      showAvatars: false,
+      badge: ['Avaliação presencial', 'Agende online'],
+      pre: 'Para quem quer resultado natural com segurança',
       h1Typed: 'Realce o seu natural na {empresa} com quem mostra resultado real, não promete milagre',
       h1Pre: 'Realce o seu natural na ',
       h1Grad: '{empresa}',
       h1Post: ' com quem mostra resultado real, não promete milagre',
+      sub: 'Avaliação que olha o seu rosto, não um pacote pronto. Você decide com o plano na mão.',
+      cta: 'AGENDAR AVALIAÇÃO',
+      ctaNote: 'Resposta no mesmo dia',
     },
-    offer: { hPre: 'Você sai com ', hGrad: 'a avaliação e o plano', hPost: ' do seu rosto na mão' },
+    ticker: [
+      { v: '+5 mil', l: 'procedimentos feitos' },
+      { v: '4,9★', l: 'avaliação das pacientes' },
+      { v: '0', l: 'resultado exagerado' },
+    ],
+    depoimentos: [
+      { nome: 'Fernanda L.', cargo: 'Paciente', txt: 'Ficou natural. Todo mundo elogia e ninguém percebe que fiz.' },
+      { nome: 'Patrícia R.', cargo: 'Paciente', txt: 'Me mostraram caso real antes. Sentei na cadeira sem medo.' },
+      { nome: 'Camila A.', cargo: 'Paciente', txt: 'Atendimento que explica tudo. Confiança do começo ao fim.' },
+    ],
+    includes: [
+      'Avaliação presencial do seu rosto',
+      'Plano de procedimento personalizado',
+      'Protocolo de recuperação acompanhado',
+      'Retorno incluso pra ajustar o resultado',
+    ],
+    offer: {
+      eyebrow: 'A avaliação',
+      hPre: 'Você sai com ', hGrad: 'a avaliação e o plano', hPost: ' do seu rosto na mão',
+      cdLab: 'A agenda do mês fecha em', cdWhen: 'Vagas desta semana', cdFoot: 'Agenda limitada por dia',
+      guaranteeTitle: 'Acompanhamento garantido', guaranteeText: 'Resultado abaixo do combinado? A gente ajusta sem custo.',
+    },
   },
   conteudo: {
     pilares: [

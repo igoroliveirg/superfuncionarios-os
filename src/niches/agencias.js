@@ -38,12 +38,39 @@ export const AGENCIAS = {
   },
   construtor: {
     hero: {
+      showAvatars: false,
+      badge: ['Diagnóstico gratuito', '30 min'],
+      pre: 'Para negócios que investem em tráfego e querem ver venda, não relatório',
       h1Typed: 'A {empresa} entrega venda no seu caixa, não relatório de alcance',
       h1Pre: 'A ',
       h1Grad: '{empresa}',
       h1Post: ' entrega venda no seu caixa, não relatório de alcance',
+      sub: 'Cada real de mídia rastreado até a venda. Você cobra resultado, não slide de alcance.',
+      cta: 'QUERO MEU DIAGNÓSTICO',
+      ctaNote: 'Gratuito, 30 min, sem compromisso',
     },
-    offer: { hPre: 'Você sai com ', hGrad: 'o plano de aquisição', hPost: ' ligado à venda, não ao alcance' },
+    ticker: [
+      { v: '+120', l: 'negócios atendidos' },
+      { v: '3,2×', l: 'retorno médio em mídia' },
+      { v: 'R$ 80mi', l: 'em vendas rastreadas' },
+    ],
+    depoimentos: [
+      { nome: 'Patrícia N.', cargo: 'CEO · varejo', txt: 'Saí do relatório bonito pra venda no caixa. Primeira agência que mostra retorno.' },
+      { nome: 'Marcelo D.', cargo: 'Dono · serviços', txt: 'Agora sei quanto cada real de mídia volta. Mudou a conversa.' },
+      { nome: 'Aline G.', cargo: 'Sócia · indústria', txt: 'Pensam no meu negócio, não só na campanha. Fez diferença no caixa.' },
+    ],
+    includes: [
+      'Diagnóstico do seu funil de aquisição',
+      'Mídia rastreada do clique até a venda',
+      'Plano ligado ao caixa, não ao alcance',
+      'Relatório que o dono entende em 2 minutos',
+    ],
+    offer: {
+      eyebrow: 'O diagnóstico',
+      hPre: 'Você sai com ', hGrad: 'o plano de aquisição', hPost: ' ligado à venda, não ao alcance',
+      cdLab: 'Os diagnósticos do mês fecham em', cdWhen: 'Vagas deste mês', cdFoot: 'Limitado a poucos diagnósticos por mês',
+      guaranteeTitle: 'Diagnóstico sem compromisso', guaranteeText: 'Não viu valor na conversa? Sem custo, sem insistência.',
+    },
   },
   conteudo: {
     pilares: [

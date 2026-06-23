@@ -798,7 +798,7 @@ function Shell() {
 
   // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
   const finalize = useCallback(async () => {
-    const timeout = new Promise((res) => setTimeout(() => res(null), 8000))
+    const timeout = new Promise((res) => setTimeout(() => res(null), 12000))
     const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
     if (out.niche) setNiche(out.niche)
     setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor })

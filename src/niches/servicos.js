@@ -38,12 +38,39 @@ export const SERVICOS = {
   },
   construtor: {
     hero: {
+      showAvatars: false,
+      badge: ['Atendimento direto', 'Resposta no mesmo dia'],
+      pre: 'Para quem precisa resolver, não virar especialista no assunto',
       h1Typed: 'Resolva com a {empresa}, quem assume o seu caso e responde no mesmo dia',
       h1Pre: 'Resolva com a ',
       h1Grad: '{empresa}',
       h1Post: ', quem assume o seu caso e responde no mesmo dia',
+      sub: 'Você explica uma vez. A gente assume daí. Resposta clara, sem juridiquês, no mesmo dia.',
+      cta: 'FALAR COM UM ESPECIALISTA',
+      ctaNote: 'Retorno em até 3h úteis',
     },
-    offer: { hPre: 'Você sai com ', hGrad: 'o diagnóstico do seu caso', hPost: ' e o próximo passo claro' },
+    ticker: [
+      { v: '+800', l: 'casos resolvidos' },
+      { v: '4,9★', l: 'avaliação dos clientes' },
+      { v: '3h', l: 'pra primeira resposta' },
+    ],
+    depoimentos: [
+      { nome: 'Eduardo M.', cargo: 'Cliente', txt: 'Assumiram o problema e me deram tranquilidade. Resolveram rápido.' },
+      { nome: 'Sandra L.', cargo: 'Cliente', txt: 'Pela primeira vez entendi tudo, sem termo difícil.' },
+      { nome: 'Roberto A.', cargo: 'Empresário', txt: 'Respondem no mesmo dia. Nunca mais fiquei no escuro.' },
+    ],
+    includes: [
+      'Diagnóstico do seu caso na primeira conversa',
+      'Um responsável direto pelo seu atendimento',
+      'Atualização clara em cada etapa',
+      'Próximos passos definidos, sem enrolação',
+    ],
+    offer: {
+      eyebrow: 'O atendimento',
+      hPre: 'Você sai com ', hGrad: 'o diagnóstico do seu caso', hPost: ' e o próximo passo claro',
+      cdLab: 'As vagas da semana fecham em', cdWhen: 'Agenda desta semana', cdFoot: 'Atendimento limitado por semana',
+      guaranteeTitle: 'Clareza garantida', guaranteeText: 'Saiu da conversa sem entender? A gente explica de novo, sem custo.',
+    },
   },
   conteudo: {
     pilares: [

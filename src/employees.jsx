@@ -762,11 +762,13 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
                       : <React.Fragment key={i}>{b}</React.Fragment>)}
                   </span>
                   <p className="lp-pre">{hero.pre}</p>
-                  <div className="lp-avatars" aria-hidden="true">
-                    {['pesquisa', 'copywriter', 'metricas', 'construtor', 'conteudo'].map((a, i) => (
-                      <img key={a} src={`/agentes/${a}.png`} alt="" style={{ '--ai': i }} />
-                    ))}
-                  </div>
+                  {hero.showAvatars && (
+                    <div className="lp-avatars" aria-hidden="true">
+                      {['pesquisa', 'copywriter', 'metricas', 'construtor', 'conteudo'].map((a, i) => (
+                        <img key={a} src={`/agentes/${a}.png`} alt="" style={{ '--ai': i }} />
+                      ))}
+                    </div>
+                  )}
                   <h1 className="lp-h1">
                     {showHero && step === 2
                       ? <Typewriter text={hero.h1Typed} />
