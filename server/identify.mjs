@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { scrapeSite } from './scrape.mjs'
+import { extractBrandColor } from './brandcolor.mjs'
 import { NICHE_IDS, NICHE_HINTS } from './niches.shared.mjs'
 
 const FALLBACK = { niche: 'generico', empresa: '', oferta: '', primaryColor: '#ff8a3c', segmento: '', confidence: 0 }
@@ -33,7 +34,7 @@ export async function identify(url) {
     const site = await scrapeSite(url)
     const client = new Anthropic() // lê ANTHROPIC_API_KEY de process.env
     const hints = NICHE_IDS.map((id) => `- ${id}: ${NICHE_HINTS[id]}`).join('\n')
-    const res = await client.messages.create({
+    const [res, realColor] = await Promise.all([client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 400,
       tools: [TOOL],
@@ -46,13 +47,15 @@ export async function identify(url) {
         role: 'user',
         content: `<site url="${url}">\n${site.slice(0, 40000)}\n</site>\n\nClassifique e extraia chamando a tool identify.`,
       }],
-    })
+    }), extractBrandColor(url)])
     const block = res.content.find((b) => b.type === 'tool_use')
     const out = block?.input ?? {}
     const niche = NICHE_IDS.includes(out.niche) ? out.niche : 'generico'
     const empresa = clean(out.empresa)
     const result = { ...FALLBACK, ...out, niche, empresa, oferta: clean(out.oferta), segmento: clean(out.segmento) }
-    if (!empresa) result.primaryColor = FALLBACK.primaryColor // sem empresa → cor da marca
+    // cor: SÓ a extraída de verdade do site. Sem extração → vazio (a landing usa
+    // o accent designado do nicho). Nunca o chute do modelo (causa do problema).
+    result.primaryColor = realColor || ''
     return result
   } catch (e) {
     return { ...FALLBACK, error: String(e?.message || e) }
