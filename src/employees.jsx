@@ -345,7 +345,7 @@ function Redator({ accent, ink, site, step = 0, pack }) {
 // (último do fluxo — fecha o ciclo: analisa canais, anúncios, página e
 //  conteúdo, e amarra tudo num insight final.)
 
-// KPI com CountUp (número anima ao revelar)
+// KPI com número quantizado (BB.Tally) ao revelar — codec-friendly no Zoom
 function Kpi({ to, label, prefix = '', suffix = '', dec = 0, ink, big }) {
   const format = (n) => prefix + n.toLocaleString('pt-BR', {
     minimumFractionDigits: dec, maximumFractionDigits: dec,
@@ -353,14 +353,14 @@ function Kpi({ to, label, prefix = '', suffix = '', dec = 0, ink, big }) {
   return (
     <div className={`kpi ${big ? 'kpi-big' : ''}`}>
       <div className="kpi-v" style={{ color: ink }}>
-        <CountUp to={to} format={format} />
+        <BuildBlock.Tally to={to} format={format} />
       </div>
       <div className="kpi-l">{label}</div>
     </div>
   )
 }
 
-// Linha de ROI: "de X → para Y" (Y anima com CountUp)
+// Linha de ROI: "de X → para Y" (Y quantizado com BB.Tally)
 function RoiStat({ from, to, label, prefix = '', suffix = '', dec = 0, ink }) {
   const format = (n) => prefix + n.toLocaleString('pt-BR', {
     minimumFractionDigits: dec, maximumFractionDigits: dec,
@@ -369,7 +369,7 @@ function RoiStat({ from, to, label, prefix = '', suffix = '', dec = 0, ink }) {
     <div className="roi-stat">
       <span className="roi-from">{from}</span>
       <span className="roi-arrow" style={{ color: ink }}>→</span>
-      <span className="roi-to" style={{ color: ink }}><CountUp to={to} format={format} /></span>
+      <span className="roi-to" style={{ color: ink }}><BuildBlock.Tally to={to} format={format} /></span>
       <span className="roi-l">{label}</span>
     </div>
   )
@@ -505,7 +505,7 @@ function Analista({ accent, ink, site, step = 0, pack }) {
               </div>
               <div className="chan-roi" style={{ color: ink }}>
                 {typeof c.roi === 'number'
-                  ? <><CountUp to={c.roi} format={(n) => fmt.x(n)} /> </>
+                  ? <><BuildBlock.Tally to={c.roi} format={(n) => fmt.x(n)} /> </>
                   : <>{c.roi}× </>}
                 <small>ROI</small>
               </div>
@@ -558,11 +558,11 @@ function Analista({ accent, ink, site, step = 0, pack }) {
         <div className="page-grid">
           <div className="page-kpis">
             <div className="pk">
-              <span className="pk-v" style={{ color: ink }}><CountUp to={PAGE.conv} format={(n) => fmt.pct(n)} /></span>
+              <span className="pk-v" style={{ color: ink }}><BuildBlock.Tally to={PAGE.conv} format={(n) => fmt.pct(n)} /></span>
               <span className="pk-l">visitante → lead <i>{PAGE.vsBench}</i></span>
             </div>
             <div className="pk">
-              <span className="pk-v" style={{ color: ink }}><CountUp to={PAGE.scroll} format={(n) => fmt.pct(n)} /></span>
+              <span className="pk-v" style={{ color: ink }}><BuildBlock.Tally to={PAGE.scroll} format={(n) => fmt.pct(n)} /></span>
               <span className="pk-l">rola até a oferta</span>
             </div>
             <div className="pk">
@@ -648,11 +648,7 @@ function Analista({ accent, ink, site, step = 0, pack }) {
           </div>
           <div className="verdict-close">
             <span className="vc-dot" style={{ background: accent, boxShadow: `0 0 10px ${accent}` }} />
-            <p className="vc-tx">
-              {step === 9
-                ? <Typewriter text="Os 5 funcionários rodaram de ponta a ponta: pesquisa → copy → página → conteúdo → este painel. A máquina está medindo sozinha. Daqui é só escalar o que prova." />
-                : 'Os 5 funcionários rodaram de ponta a ponta: pesquisa → copy → página → conteúdo → este painel. A máquina está medindo sozinha. Daqui é só escalar o que prova.'}
-            </p>
+            <BuildBlock.Line as="p" className="vc-tx">Os 5 funcionários rodaram de ponta a ponta: pesquisa → copy → página → conteúdo → este painel. A máquina está medindo sozinha. Daqui é só escalar o que prova.</BuildBlock.Line>
           </div>
         </div>
       </Section>
@@ -780,7 +776,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
                   )}
                   <h1 className="lp-h1">
                     {showHero && step === 2
-                      ? <Typewriter text={hero.h1Typed} />
+                      ? <BuildBlock.Line as="span" className="lp-h1-line">{hero.h1Typed}</BuildBlock.Line>
                       : <>{hero.h1Pre}<span className="lp-grad">{hero.h1Grad}</span>{hero.h1Post}</>}
                   </h1>
                   <p className="lp-sub">{hero.sub}</p>

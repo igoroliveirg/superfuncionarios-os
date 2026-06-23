@@ -1401,6 +1401,16 @@ body {
 .ps-track { height: 8px; background: #eceef2; border-radius: 99px; overflow: hidden; }
 .ps-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; }
 .ps-fill.building { width: var(--w); animation: fnGrow 0.6s var(--e-quint) both; }
+/* Fase 2 · barras do Analista viram snap-lock (clip-path quantizado), igual ao
+   Criador. Override após as definições; reduced-motion (mais abaixo) ainda vence
+   com !important. Largura final continua var(--w); o clip revela em 5 passos. */
+.fn-bar.building,
+.chan-fill.building,
+.share-fill.building,
+.ps-fill.building,
+.roi-proj.building { animation: bbBarReveal 0.5s steps(5, end) both; }
+/* sem box-shadow glow sob Modo demo (o blur some no bitrate; a barra sólida não) */
+.zoom-mode .fn-bar, .zoom-mode .roi-proj { box-shadow: none !important; }
 .ps-drop { font-size: 12px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
 .ps-note { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: -1px; }
 
@@ -1557,6 +1567,8 @@ body {
   letter-spacing: -0.03em; color: #fff; text-wrap: balance;
 }
 .lp.dev-mobile .lp-h1 { font-size: 21px; }
+/* o BB.Line do hero herda a cor do h1 (claro no viewport escuro), não o ink padrão */
+.lp-h1 .bb-line.is-ink, .lp-h1 .bb-line.is-bone { color: inherit; display: inline; }
 /* realce laranja sólido (sem gradient-text — AA sobre #0e0a18) */
 .lp-grad { color: var(--lp-grad); font-weight: 800; }
 .lp-sub {
