@@ -4,6 +4,13 @@ import { NICHE_IDS, NICHE_HINTS } from './niches.shared.mjs'
 
 const FALLBACK = { niche: 'generico', empresa: '', oferta: '', primaryColor: '#ff8a3c', segmento: '', confidence: 0 }
 
+// normaliza placeholders do modelo ("<UNKNOWN>", "N/A", etc.) para string vazia
+const clean = (s) => {
+  const v = String(s ?? '').trim()
+  if (!v || /^<?\s*(unknown|desconhecido|n\/?a|none|null|indefinido)\s*>?$/i.test(v)) return ''
+  return v
+}
+
 const TOOL = {
   name: 'identify',
   description: 'Classifica o site do cliente num nicho e extrai variáveis da marca.',
@@ -43,7 +50,10 @@ export async function identify(url) {
     const block = res.content.find((b) => b.type === 'tool_use')
     const out = block?.input ?? {}
     const niche = NICHE_IDS.includes(out.niche) ? out.niche : 'generico'
-    return { ...FALLBACK, ...out, niche }
+    const empresa = clean(out.empresa)
+    const result = { ...FALLBACK, ...out, niche, empresa, oferta: clean(out.oferta), segmento: clean(out.segmento) }
+    if (!empresa) result.primaryColor = FALLBACK.primaryColor // sem empresa → cor da marca
+    return result
   } catch (e) {
     return { ...FALLBACK, error: String(e?.message || e) }
   }
