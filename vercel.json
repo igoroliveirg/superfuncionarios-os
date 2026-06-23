@@ -1,0 +1,14 @@
+{
+  "redirects": [
+    { "source": "/human", "destination": "/deck/human-skill.zip", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/deck/human-skill.zip",
+      "headers": [
+        { "key": "Content-Disposition", "value": "attachment; filename=\"human-skill.zip\"" },
+        { "key": "Cache-Control", "value": "public, max-age=300" }
+      ]
+    }
+  ]
+}
