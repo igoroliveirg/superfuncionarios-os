@@ -6,6 +6,7 @@ import { CLINICAS } from './clinicas.js'
 import { ECOMMERCE } from './ecommerce.js'
 import { SERVICOS } from './servicos.js'
 import { AGENCIAS } from './agencias.js'
+import { APP } from './app.js'
 
 export const NICHES = {
   generico: GENERICO,
@@ -14,6 +15,7 @@ export const NICHES = {
   ecommerce: ECOMMERCE,
   servicos: SERVICOS,
   agencias: AGENCIAS,
+  app: APP,
 }
 
 // Resolve o pack final = BASE_PACK + override do nicho, interpolado com as

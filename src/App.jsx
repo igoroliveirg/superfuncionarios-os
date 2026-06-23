@@ -802,10 +802,14 @@ function Shell() {
     const timeout = new Promise((res) => setTimeout(() => res(null), 12000))
     const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
     if (out.niche) setNiche(out.niche)
-    // override de palco: #theme=light|dark força o tema (sites JS podem não expor)
-    const tm = typeof window !== 'undefined' && window.location.hash.match(/theme=(light|dark)/i)
+    // overrides de palco (sites blindados não expõem nada): #theme=light|dark e
+    // #color=rrggbb forçam tema e cor da marca manualmente.
+    const hash = typeof window !== 'undefined' ? window.location.hash : ''
+    const tm = hash.match(/theme=(light|dark)/i)
+    const cm = hash.match(/color=([0-9a-fA-F]{3,6})\b/)
     const theme = tm ? tm[1].toLowerCase() : (out.theme || 'dark')
-    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor: out.primaryColor, theme })
+    const primaryColor = cm ? `#${cm[1]}` : out.primaryColor
+    setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor, theme })
     goDesktop()
   }, [])
 
