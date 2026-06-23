@@ -293,7 +293,7 @@ body {
   background: #fff; overflow: hidden; margin-top: 6px;
 }
 .url-pre { padding: 0 4px 0 16px; color: var(--muted); font-size: 15px; }
-.url-in { flex: 1; border: none; outline: none; padding: 15px 16px 15px 4px; font-size: 15px; font-family: inherit; color: var(--ink); }
+.url-in { flex: 1; border: none; outline: none; padding: 15px 16px 15px 4px; font-size: 15px; font-family: inherit; color: var(--ink); caret-color: var(--ink); }
 
 .analyzing .spinner {
   width: 46px; height: 46px; margin: 0 auto 22px;
