@@ -799,7 +799,7 @@ function Shell() {
 
   // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
   const finalize = useCallback(async () => {
-    const timeout = new Promise((res) => setTimeout(() => res(null), 12000))
+    const timeout = new Promise((res) => setTimeout(() => res(null), 15000))
     const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
     if (out.niche) setNiche(out.niche)
     // overrides de palco (sites blindados não expõem nada): #theme=light|dark e

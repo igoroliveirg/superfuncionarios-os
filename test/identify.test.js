@@ -18,6 +18,8 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }))
 vi.mock('../server/scrape.mjs', () => ({ scrapeSite: vi.fn().mockResolvedValue('Clínica Bem — harmonização facial') }))
 vi.mock('../server/brandcolor.mjs', () => ({ extractBrandStyle: vi.fn().mockImplementation(async () => ({ color: h.state.color, theme: h.state.theme })) }))
+// render do browser indisponível no teste → null → usa o heurístico mockado acima
+vi.mock('../server/render.mjs', () => ({ renderStyle: vi.fn().mockResolvedValue(null) }))
 
 import { identify } from '../server/identify.mjs'
 

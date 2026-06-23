@@ -7,6 +7,8 @@ function apiMiddleware() {
   return {
     name: 'sfos-api',
     configureServer(server) {
+      // pré-aquece o chromium do render no boot (1ª análise já sai rápida)
+      import('./server/render.mjs').then((m) => m.prewarm()).catch(() => {})
       server.middlewares.use('/api/identify', (req, res) => {
         if (req.method !== 'POST') { res.statusCode = 405; return res.end('method') }
         let body = ''

@@ -1,7 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { scrapeSite } from './scrape.mjs'
 import { extractBrandStyle } from './brandcolor.mjs'
+import { renderStyle } from './render.mjs'
 import { NICHE_IDS, NICHE_HINTS } from './niches.shared.mjs'
+
+// identidade visual real: render do navegador (lê cor do botão + tema do fundo,
+// 100% automático) → fallback heurístico HTML/CSS quando o site não carrega.
+async function brandStyle(url) {
+  return (await renderStyle(url)) ?? (await extractBrandStyle(url))
+}
 
 const FALLBACK = { niche: 'generico', empresa: '', oferta: '', primaryColor: '#ff8a3c', segmento: '', confidence: 0, theme: 'dark' }
 
@@ -31,10 +38,11 @@ const TOOL = {
 
 export async function identify(url) {
   try {
-    const site = await scrapeSite(url)
+    // scrape (p/ o nicho) e identidade visual rodam em paralelo
+    const [site, style] = await Promise.all([scrapeSite(url), brandStyle(url)])
     const client = new Anthropic() // lê ANTHROPIC_API_KEY de process.env
     const hints = NICHE_IDS.map((id) => `- ${id}: ${NICHE_HINTS[id]}`).join('\n')
-    const [res, style] = await Promise.all([client.messages.create({
+    const res = await client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 400,
       tools: [TOOL],
@@ -47,7 +55,7 @@ export async function identify(url) {
         role: 'user',
         content: `<site url="${url}">\n${site.slice(0, 40000)}\n</site>\n\nClassifique e extraia chamando a tool identify.`,
       }],
-    }), extractBrandStyle(url)])
+    })
     const block = res.content.find((b) => b.type === 'tool_use')
     const out = block?.input ?? {}
     const niche = NICHE_IDS.includes(out.niche) ? out.niche : 'generico'
