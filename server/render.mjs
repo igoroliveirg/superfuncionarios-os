@@ -21,6 +21,13 @@ function parseRgb(str) {
 }
 const toHex = ([r, g, b]) => '#' + [r, g, b].map((x) => Math.min(255, x).toString(16).padStart(2, '0')).join('')
 
+// verde brilhante do botão flutuante de WhatsApp/chat — polui a extração.
+// só os tons brilhantes do widget (#25d366/#4dc247/#34af23); tolerância apertada
+// (≈18) não pega verde de marca legítimo (Spotify ~33, teal ~76 de distância).
+const WIDGET = [[37, 211, 102], [77, 194, 71], [52, 175, 35]]
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+const isWidget = (rgb) => WIDGET.some((w) => dist(rgb, w) < 18)
+
 // cor de marca = bg de botão/CTA saturado mais frequente (peso 3 p/ bg, 1 p/ texto)
 export function pickBrand(entries) {
   const freq = new Map()
@@ -28,8 +35,8 @@ export function pickBrand(entries) {
     const rgb = parseRgb(c); if (!rgb) continue
     const [s, l] = rgbHsl(...rgb)
     if (s < 0.25 || l > 0.92 || l < 0.08) continue // neutro
-    const hex = toHex(rgb)
-    freq.set(hex, (freq.get(hex) || 0) + w)
+    if (isWidget(rgb)) continue // verde do WhatsApp/chat flutuante
+    freq.set(toHex(rgb), (freq.get(toHex(rgb)) || 0) + w)
   }
   let best = null, max = 0
   for (const [h, n] of freq) if (n > max) { max = n; best = h }

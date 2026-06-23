@@ -16,6 +16,16 @@ describe('pickBrand (cor de marca do estilo computado)', () => {
   it('ignora cor transparente', () => {
     expect(pickBrand([['rgba(34,197,94,0.1)', 9]])).toBeNull()
   })
+  it('filtra o verde do WhatsApp (botão flutuante) e pega a marca real', () => {
+    const r = pickBrand([
+      ['rgb(37, 211, 102)', 12], // verde WhatsApp (widget) — frequente, mas ignorado
+      ['rgb(13, 148, 136)', 5],  // teal da marca — vence
+    ])
+    expect(r).toBe('#0d9488')
+  })
+  it('NÃO filtra verde de marca distante do WhatsApp (ex.: Spotify)', () => {
+    expect(pickBrand([['rgb(29, 185, 84)', 8]])).toBe('#1db954')
+  })
 })
 
 describe('themeFromBg', () => {

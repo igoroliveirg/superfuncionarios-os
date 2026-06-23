@@ -4,12 +4,6 @@ import { extractBrandStyle } from './brandcolor.mjs'
 import { renderStyle } from './render.mjs'
 import { NICHE_IDS, NICHE_HINTS } from './niches.shared.mjs'
 
-// identidade visual real: render do navegador (lê cor do botão + tema do fundo,
-// 100% automático) → fallback heurístico HTML/CSS quando o site não carrega.
-async function brandStyle(url) {
-  return (await renderStyle(url)) ?? (await extractBrandStyle(url))
-}
-
 const FALLBACK = { niche: 'generico', empresa: '', oferta: '', primaryColor: '#ff8a3c', segmento: '', confidence: 0, theme: 'dark' }
 
 // normaliza placeholders do modelo ("<UNKNOWN>", "N/A", etc.) para string vazia
@@ -38,11 +32,15 @@ const TOOL = {
 
 export async function identify(url) {
   try {
-    // scrape (p/ o nicho) e identidade visual rodam em paralelo
-    const [site, style] = await Promise.all([scrapeSite(url), brandStyle(url)])
     const client = new Anthropic() // lê ANTHROPIC_API_KEY de process.env
     const hints = NICHE_IDS.map((id) => `- ${id}: ${NICHE_HINTS[id]}`).join('\n')
-    const res = await client.messages.create({
+    // máximo paralelismo: scrape, render do browser e heurístico HTML/CSS
+    // disparam juntos; o Haiku começa assim que o scrape termina.
+    const siteP = scrapeSite(url)
+    const renderP = renderStyle(url)
+    const heurP = extractBrandStyle(url)
+    const site = await siteP
+    const [res, render, heur] = await Promise.all([client.messages.create({
       model: 'claude-haiku-4-5',
       max_tokens: 400,
       tools: [TOOL],
@@ -55,16 +53,16 @@ export async function identify(url) {
         role: 'user',
         content: `<site url="${url}">\n${site.slice(0, 40000)}\n</site>\n\nClassifique e extraia chamando a tool identify.`,
       }],
-    })
+    }), renderP, heurP])
     const block = res.content.find((b) => b.type === 'tool_use')
     const out = block?.input ?? {}
     const niche = NICHE_IDS.includes(out.niche) ? out.niche : 'generico'
     const empresa = clean(out.empresa)
     const result = { ...FALLBACK, ...out, niche, empresa, oferta: clean(out.oferta), segmento: clean(out.segmento) }
-    // cor + tema: extraídos DE VERDADE do site. Cor vazia → landing usa o accent
-    // do nicho (nunca o chute do modelo). Tema claro/escuro segue o site do cliente.
-    result.primaryColor = style.color || ''
-    result.theme = style.theme || 'dark'
+    // cor exata do botão (render) preferida; heurístico HTML/CSS complementa.
+    // Cor vazia → landing usa o accent do nicho (nunca o chute do modelo).
+    result.primaryColor = (render && render.color) || heur.color || ''
+    result.theme = (render && render.theme) || heur.theme || 'dark'
     return result
   } catch (e) {
     return { ...FALLBACK, error: String(e?.message || e) }
