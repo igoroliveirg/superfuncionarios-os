@@ -1,8 +1,9 @@
-import React, { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
 import { useAgentChat, ChatPanel } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
+import { resolvePack } from './niches/index.js'
 
 // Marca da Super Funcionários: três barras (eco do favicon do GDIA)
 function Mark() {
@@ -309,7 +310,7 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 //  DESKTOP
 // ════════════════════════════════════════════════════════════════════
 
-function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen }) {
+function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack }) {
   const { ref, flyToDock } = useGenieWindow(origin)
   const chat = useAgentChat(SCRIPTS[emp.id]) // conversa viva do agente ativo
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
@@ -377,7 +378,7 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen 
         </div>
       </div>
       <div className="window-body has-chat" ref={bodyRef}>
-        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} />
+        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} />
       </div>
       <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} />
     </div>
@@ -648,7 +649,7 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
   )
 })
 
-function Desktop({ site, onPresent }) {
+function Desktop({ site, onPresent, pack }) {
   const [activeId, setActiveId] = useState('pesquisa') // janela única (ou null)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
@@ -701,6 +702,7 @@ function Desktop({ site, onPresent }) {
             onClose={close}
             onMinimize={close}
             onOpen={open}
+            pack={pack}
           />
         )}
         {isRotinas && (
@@ -733,6 +735,7 @@ function Shell() {
   const [presenting, setPresenting] = useState(() =>
     typeof window !== 'undefined' && /present/i.test(window.location.hash))
   const prevPhaseRef = useRef('boot')
+  const pack = useMemo(() => resolvePack('generico', { empresa: 'superfuncionarios' }), [])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -807,7 +810,7 @@ function Shell() {
         />
       )}
 
-      {phase === 'desktop' && <Desktop site={site} onPresent={startPresent} />}
+      {phase === 'desktop' && <Desktop site={site} onPresent={startPresent} pack={pack} />}
 
       {presenting && (
         <Presentation site={site || 'superfuncionarios.ai'} onExit={stopPresent} />
