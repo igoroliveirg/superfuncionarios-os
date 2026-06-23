@@ -1060,7 +1060,7 @@ body {
 .obj-txt { font-size: 13.5px; font-weight: 600; color: var(--ink); }
 .obj-pct { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .obj-track { height: 6px; border-radius: 99px; background: rgba(0,0,0,0.06); overflow: hidden; margin: 8px 0; }
-.obj-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; animation: objGrow 0.7s var(--e-quart) both; }
+.obj-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; animation: objGrow 0.6s steps(5, end) both; }
 @keyframes objGrow { from { transform: scaleX(0); } }
 .obj-fix { font-size: 12.5px; line-height: 1.4; color: #5c5c64; }
 .obj-fix span { font-weight: 800; margin-right: 4px; }
@@ -1082,7 +1082,7 @@ body {
 .sw-soph { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .sw-soph-lab { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
 .sw-soph-bar { flex: 1; height: 6px; border-radius: 99px; background: rgba(0,0,0,0.06); overflow: hidden; }
-.sw-soph-bar span { display: block; height: 100%; border-radius: 99px; transform-origin: left; animation: objGrow 0.7s var(--e-quart) 0.1s both; }
+.sw-soph-bar span { display: block; height: 100%; border-radius: 99px; transform-origin: left; animation: objGrow 0.6s steps(5, end) 0.1s both; }
 .sw-soph-v { font-size: 12px; font-weight: 800; white-space: nowrap; }
 
 /* SEÇÃO 6 · ângulos de anúncio (pesquisa — prefixados p/ não colidir c/ Redator) */
@@ -1151,9 +1151,8 @@ body {
 .angle-score small { font-size: 11px; font-weight: 700; color: var(--muted); }
 .angle-h { font-size: 13px; line-height: 1.4; color: #2c2c30; min-height: 36px; }
 .angle-meter { height: 7px; background: rgba(0,0,0,0.07); border-radius: 99px; overflow: hidden; }
-.angle-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; }
-.angle-fill.building { animation: meterGrow 0.7s var(--e-quart) both; }
-@keyframes meterGrow { from { transform: scaleX(0); } }
+.angle-fill { display: block; height: 100%; border-radius: 99px; }
+.angle-fill.building { animation: bbBarReveal 0.5s steps(5, end) both; }
 .angle-note { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
 .angle .ghost-btn { align-self: flex-start; }
 
@@ -1218,8 +1217,8 @@ body {
 .funnel .fn-row { display: grid; grid-template-columns: 180px 1fr 44px; align-items: center; gap: 12px; animation: copyReveal 0.42s var(--e-quart) both; animation-delay: var(--bd, 0s); }
 .fn-l { font-size: 12.5px; color: #2c2c30; }
 .fn-track { height: 18px; background: rgba(0,0,0,0.06); border-radius: var(--r-xs); overflow: hidden; }
-.fn-fill { display: block; height: 100%; border-radius: var(--r-xs); transform-origin: left; }
-.fn-fill.building { animation: meterGrow 0.8s var(--e-quart) both; }
+.fn-fill { display: block; height: 100%; border-radius: var(--r-xs); }
+.fn-fill.building { animation: bbBarReveal 0.5s steps(5, end) both; }
 .fn-v { font-size: 16px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
 .funnel-note { margin-top: 12px; font-size: 13px; line-height: 1.5; color: #2c2c30; padding: 11px 14px; background: #f7f8fa; border: 1px solid var(--line); border-top: 2px solid var(--ink); border-radius: var(--r-sm); }
 
@@ -1993,7 +1992,7 @@ body {
 .src-row { display: grid; grid-template-columns: 1fr 110px 56px; align-items: center; gap: 12px; font-size: 13px; }
 .src-name { color: #2c2c30; }
 .src-bar { height: 8px; border-radius: 99px; background: #eef0f3; overflow: hidden; }
-.src-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; transform: scaleX(0); animation: srcGrow 0.7s var(--e-quart) var(--sd) both; }
+.src-fill { display: block; height: 100%; border-radius: 99px; transform-origin: left; transform: scaleX(0); animation: srcGrow 0.6s steps(5, end) var(--sd) both; }
 @keyframes srcGrow { from { transform: scaleX(0); } }
 .src-n { text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .src-fill { animation: none !important; } }
@@ -2431,3 +2430,10 @@ body {
   .bb-img-real { opacity: 1; }
 }
 .zoom-mode .bb-img-real { animation: none !important; opacity: 1; }
+
+/* ── Fase 3 · Pesquisador + Redator ── */
+/* headlines migradas pra BB.Line herdam a cor do próprio elemento (h3/p),
+   não o --bb-ink padrão — preserva o visual original em cada superfície */
+.persona-name-line.bb-line, .ad-h.bb-line { color: inherit; }
+/* sem box-shadow glow na barra de objeções sob Modo demo (blur some no bitrate) */
+.zoom-mode .obj-fill { box-shadow: none !important; }

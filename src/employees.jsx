@@ -1,5 +1,5 @@
 import React from 'react'
-import { Typewriter, CountUp, Section, fmt, BuildBlock } from './chat.jsx'
+import { Section, fmt, BuildBlock } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
 import { safeAccent } from './niches/color.js'
 
@@ -126,9 +126,9 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
 
       <Section show={step > 0}>
         <InsightStrip ink={ink} items={[
-          { v: <CountUp to={12480} format={fmt.int} />, l: 'comentários e vídeos lidos' },
+          { v: <BuildBlock.Tally to={12480} format={fmt.int} />, l: 'comentários e vídeos lidos' },
           { v: '3 sem → 1 manhã', l: 'tempo de pesquisa' },
-          { v: <><CountUp to={2} format={fmt.int} />× CTR</>, l: 'na palavra que o cliente usa' },
+          { v: <><BuildBlock.Tally to={2} format={fmt.int} />× CTR</>, l: 'na palavra que o cliente usa' },
         ]} />
         <SectionTitle accent={accent}>Fontes analisadas · 12.480 trechos</SectionTitle>
         <div className="src-list">
@@ -136,7 +136,7 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
             <div key={i} className="src-row" style={{ '--sd': `${(i * 0.07).toFixed(2)}s` }}>
               <span className="src-name">{s.f}</span>
               <span className="src-bar"><span className="src-fill" style={{ transform: `scaleX(${(s.n / fontes[0].n).toFixed(3)})`, background: accent }} /></span>
-              <span className="src-n" style={{ color: ink }}><CountUp to={s.n} format={fmt.int} /></span>
+              <span className="src-n" style={{ color: ink }}><BuildBlock.Tally to={s.n} format={fmt.int} /></span>
             </div>
           ))}
         </div>
@@ -145,12 +145,12 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
       <Section show={step > 1}>
         <SectionTitle accent={accent}>Cliente ideal</SectionTitle>
         <div className="persona" style={{ '--pa': accent }}>
-          <div className="persona-av" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}66)`, boxShadow: `0 8px 24px ${accent}44` }}>
+          <div className="persona-av" style={{ background: accent }}>
             {persona.nome[0]}
           </div>
           <div className="persona-body">
             <div className="persona-top">
-              <h3><Typewriter text={persona.nome} /> <span className="persona-age">{persona.idade} anos</span></h3>
+              <h3><BuildBlock.Line as="span" className="persona-name-line">{persona.nome}</BuildBlock.Line> <span className="persona-age">{persona.idade} anos</span></h3>
               <span className="persona-ctx">{persona.contexto}</span>
             </div>
             <div className="persona-meta">
@@ -188,7 +188,7 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
               <div className="obj-main">
                 <div className="obj-head">
                   <span className="obj-txt">{o.txt}</span>
-                  <span className="obj-pct" style={{ color: ink }}><CountUp to={o.pct} format={fmt.int} />%</span>
+                  <span className="obj-pct" style={{ color: ink }}><BuildBlock.Tally to={o.pct} format={fmt.int} />%</span>
                 </div>
                 <div className="obj-track">
                   <span className="obj-fill" style={{ width: `${o.pct}%`, background: accent, boxShadow: `0 0 10px ${accent}66` }} />
@@ -255,14 +255,14 @@ function Redator({ accent, ink, site, step = 0, pack }) {
           <div className="ba-arrow" style={{ color: ink }}>→</div>
           <div className="ba-col after" style={{ borderColor: ink }}>
             <span className="ba-tag" style={{ background: ink }}>Depois</span>
-            <p>{fresh(0) ? <Typewriter text={headlineAfter} /> : headlineAfter}</p>
+            <BuildBlock.Line as="p">{headlineAfter}</BuildBlock.Line>
           </div>
         </div>
 
         <SectionTitle accent={accent}>Anúncio completo</SectionTitle>
         <div className="ad-doc" style={{ '--ac': accent }}>
           <span className="ad-kicker" style={{ color: ink }}>● Anúncio pronto pra subir</span>
-          <h3 className="ad-h">{fresh(0) ? <Typewriter text={headlineAfter} durationMs={900} /> : headlineAfter}</h3>
+          <BuildBlock.Line as="h3" className="ad-h">{headlineAfter}</BuildBlock.Line>
           <p className="ad-lead">{lead}</p>
           <ul className="ad-bullets">
             {bullets.map((b, i) => (
@@ -283,7 +283,7 @@ function Redator({ accent, ink, site, step = 0, pack }) {
               <div className="angle-top">
                 <span className="angle-tag" style={{ borderColor: accent, color: ink }}>{a.tag}</span>
                 <span className="angle-score" style={{ color: ink }}>
-                  {fresh(1) ? <CountUp to={a.score} format={fmt.int} /> : a.score}<small>/100</small>
+                  {fresh(1) ? <BuildBlock.Tally to={a.score} format={fmt.int} /> : a.score}<small>/100</small>
                 </span>
               </div>
               <p className="angle-h">{a.h}</p>
@@ -328,7 +328,7 @@ function Redator({ accent, ink, site, step = 0, pack }) {
                 />
               </div>
               <span className="fn-v" style={{ color: ink }}>
-                {fresh(3) ? <CountUp to={f.v} format={fmt.int} /> : f.v}
+                {fresh(3) ? <BuildBlock.Tally to={f.v} format={fmt.int} /> : f.v}
               </span>
             </div>
           ))}
