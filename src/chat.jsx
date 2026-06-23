@@ -4,6 +4,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer, u
 // volta esconde) — pro passador de slides funcionar nos dois sentidos.
 export const PresentationCtx = React.createContext(false)
 
+// Modo demo (screen-share do Zoom): mata typewriter char-a-char, rAF de scroll e
+// micro-movimento. Provido lá no App; lido por render onde precisa cravar frame.
+export const ZoomCtx = React.createContext(false)
+
 // reduced-motion lido por render (barato); mesmo padrão do App.jsx
 const prefersReduced = () =>
   typeof window !== 'undefined' && window.matchMedia &&
@@ -16,15 +20,16 @@ export function Typewriter({
   text = '', msPerChar = 14, minMs = 260, maxMs = 1700,
   className, onDone, as: Tag = 'span', caret = true,
 }) {
-  const reduce = prefersReduced()
-  const [count, setCount] = useState(reduce ? text.length : 0)
+  const zoom = useContext(ZoomCtx)
+  const instant = prefersReduced() || zoom // Modo demo: texto inteiro, sem char-a-char
+  const [count, setCount] = useState(instant ? text.length : 0)
   const doneRef = useRef(false)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
   useEffect(() => {
     doneRef.current = false
-    if (reduce || !text) {
+    if (instant || !text) {
       setCount(text.length)
       onDoneRef.current?.()
       return
@@ -44,13 +49,13 @@ export function Typewriter({
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, msPerChar, minMs, maxMs, reduce])
+  }, [text, msPerChar, minMs, maxMs, instant])
 
   const shown = text.slice(0, count)
-  const typing = !reduce && count < text.length
+  const typing = !instant && count < text.length
   return (
     <Tag className={className} aria-label={text}>
-      <span aria-hidden={!reduce}>{shown}</span>
+      <span aria-hidden={!instant}>{shown}</span>
       {caret && typing && <span className="tw-caret" aria-hidden="true" />}
     </Tag>
   )
@@ -105,6 +110,193 @@ export function Section({ show, className = '', children }) {
   if (!revealed) return null
   return <div className={`reveal sec-block ${className}`}>{children}</div>
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  <BuildBlock> · a primitiva única dos 5 outputs (linguagem de "build")
+//  Máquina de 4 estados idle→skeleton→fill→locked. Troca a gramática de
+//  movimento (typewriter/rAF/scaleX/glow) por uma que o codec H.264 do Zoom
+//  encoda limpo: reveal de linha inteira, número quantizado, barra com snap-lock,
+//  borda sólida de conclusão. Cada `hold` vira frame de bitrate quase zero.
+//  Fase 0: a primitiva + sub-componentes existem e são testáveis. NÃO aplicada
+//  aos 5 ainda — nada visual muda pros funcionários nesta fase.
+// ════════════════════════════════════════════════════════════════════
+
+// stops do build: 5 frames discretos (0/40/70/90/100%), último cravado
+export const BUILD_STOPS = [0, 0.4, 0.7, 0.9, 1]
+
+// valores quantizados do <Tally> — puro e testável. O último é exatamente `to`
+// (cravado), então o número nunca para num valor errado mesmo se um tick cair.
+export function tallyValues(to, from = 0) {
+  const last = BUILD_STOPS.length - 1
+  return BUILD_STOPS.map((s, i) => (i === last ? to : from + (to - from) * s))
+}
+
+// máquina de estados do build — pura e testável. `locked` é terminal: nenhuma
+// turn futura re-anima o bloco.
+export function buildReducer(state, action) {
+  switch (action.type) {
+    case 'START': return state === 'idle' ? 'skeleton' : state
+    case 'FILL':  return state === 'skeleton' ? 'fill' : state
+    case 'LOCK':  return state === 'fill' ? 'locked' : state
+    case 'SNAP':  return 'locked' // reduced-motion / prioriza framerate
+    default: return state
+  }
+}
+
+// classe de estado do bloco — pura e testável
+export function buildClass(phase) {
+  return `bb is-${phase}`
+}
+
+// timeline por beat (~1,4s, dentro do range travado 1,2–1,8s)
+const BB_T = { skeleton: 280, fill: 420, hold: 600, lock: 200 }
+
+// fila sequencial: cada <BuildBlock beat={n}> só inicia quando o anterior travou.
+// 1 foco por beat (não stagger paralelo). Sem provider → o bloco libera de imediato.
+const BuildSeqCtx = React.createContext(null)
+const BBPhaseCtx = React.createContext('idle')
+
+export function BuildSequence({ children }) {
+  const [activeBeat, setActiveBeat] = useState(0)
+  const advance = useCallback((beat) => setActiveBeat((b) => Math.max(b, beat + 1)), [])
+  const value = useMemo(() => ({ activeBeat, advance }), [activeBeat, advance])
+  return <BuildSeqCtx.Provider value={value}>{children}</BuildSeqCtx.Provider>
+}
+
+export function BuildBlock({ beat = 0, className = '', children, onLocked, as: Tag = 'div' }) {
+  const seq = useContext(BuildSeqCtx)
+  const reduce = prefersReduced()
+  const [phase, dispatch] = useReducer(buildReducer, 'idle')
+  const ref = useRef(null)
+  const startedRef = useRef(false)
+  const cbRef = useRef(onLocked); cbRef.current = onLocked
+  // beat liberado pela fila? (sem fila → sempre liberado)
+  const myTurn = !seq || seq.activeBeat >= beat
+
+  useEffect(() => {
+    if (!myTurn || startedRef.current) return
+    startedRef.current = true
+    if (reduce) { // sem movimento: vai direto pro locked e libera o próximo
+      dispatch({ type: 'SNAP' }); seq?.advance(beat); cbRef.current?.()
+      return
+    }
+    dispatch({ type: 'START' }) // → skeleton
+    const t1 = setTimeout(() => dispatch({ type: 'FILL' }), BB_T.skeleton)
+    const t2 = setTimeout(() => dispatch({ type: 'LOCK' }), BB_T.skeleton + BB_T.fill + BB_T.hold)
+    const t3 = setTimeout(() => { seq?.advance(beat); cbRef.current?.() },
+      BB_T.skeleton + BB_T.fill + BB_T.hold + BB_T.lock)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myTurn])
+
+  // will-change só enquanto preenche (a fila adiciona e remove); no lock some, pra
+  // não deixar camada órfã viva que derruba o framerate nos holds.
+  const willChange = phase === 'fill' ? 'opacity, transform' : 'auto'
+
+  return (
+    <BBPhaseCtx.Provider value={phase}>
+      <Tag ref={ref} className={`${buildClass(phase)} ${className}`} style={{ willChange }}>
+        {children}
+      </Tag>
+    </BBPhaseCtx.Provider>
+  )
+}
+
+// ── sub-componentes: mesma primitiva, garantem a consistência dos 5 ──
+// Todos leem o estado do bloco (BBPhaseCtx) e a cor do cliente via --bb-accent
+// /--bb-ink/--bb-bone do contexto CSS. A curva é sempre --e-quart.
+
+// texto/headline brandado: reveal de linha inteira (bone→ink), nunca char-a-char
+function BBLine({ children, className = '', as: Tag = 'div' }) {
+  return <Tag className={`bb-line ${className}`}>{children}</Tag>
+}
+
+// barras com snap-lock: cresce a 80%, hold, trava (sem scaleX sub-pixel, sem glow)
+function BBBars({ rows = [], className = '' }) {
+  const phase = useContext(BBPhaseCtx)
+  const on = phase === 'fill' || phase === 'locked'
+  return (
+    <div className={`bb-bars ${className}`}>
+      {rows.map((r, i) => (
+        <div className="bb-bar-row" key={r.id ?? i}>
+          {r.label && <span className="bb-bar-k">{r.label}</span>}
+          <div className="bb-bar-track">
+            <span className="bb-bar-fill" style={{ '--bb-pct': `${on ? r.pct : 0}%` }} />
+          </div>
+          {r.value != null && <span className="bb-bar-v">{r.value}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// número quantizado: setInterval 110ms, 5 ticks, final cravado (substitui CountUp rAF)
+function BBTally({ to, from = 0, format = (n) => String(Math.round(n)), className, as: Tag = 'span' }) {
+  const reduce = prefersReduced()
+  const steps = useMemo(() => tallyValues(to, from), [to, from])
+  const [idx, setIdx] = useState(reduce ? steps.length - 1 : 0)
+  useEffect(() => {
+    if (reduce) { setIdx(steps.length - 1); return }
+    setIdx(0)
+    let i = 0
+    const id = setInterval(() => {
+      i += 1
+      setIdx(i)
+      if (i >= steps.length - 1) clearInterval(id)
+    }, 110)
+    return () => clearInterval(id)
+  }, [steps, reduce])
+  return <Tag className={`bb-tally ${className || ''}`}>{format(steps[Math.min(idx, steps.length - 1)])}</Tag>
+}
+
+// troca o placeholder (caixa cinza com selo do nicho) pelo artefato brandado
+function BBImage({ src, alt = '', fallbackNiche, className = '' }) {
+  const phase = useContext(BBPhaseCtx)
+  const ready = (phase === 'fill' || phase === 'locked') && src
+  return (
+    <div className={`bb-img ${ready ? 'is-ready' : 'is-bone'} ${className}`}>
+      {ready
+        ? <img src={src} alt={alt} className="bb-img-real" />
+        : <span className="bb-img-seal" aria-hidden="true">{fallbackNiche || ''}</span>}
+    </div>
+  )
+}
+
+// popula tile a tile em ondas (não 9 de uma vez); "preencher tudo" antecipa o resto
+function BBGrid({ tiles = [], waves = 3, cadence = 600, className = '' }) {
+  const reduce = prefersReduced()
+  const total = tiles.length
+  const per = Math.max(1, Math.ceil(total / waves))
+  const [shown, setShown] = useState(reduce ? total : 0)
+  const fillAll = useCallback(() => setShown(total), [total])
+  useEffect(() => {
+    if (reduce) { setShown(total); return }
+    setShown(0)
+    let w = 0
+    const id = setInterval(() => {
+      w += 1
+      setShown(Math.min(total, w * per))
+      if (w * per >= total) clearInterval(id)
+    }, cadence)
+    return () => clearInterval(id)
+  }, [total, per, cadence, reduce])
+  return (
+    <div className={`bb-grid ${className}`} onClick={fillAll}>
+      {tiles.map((t, i) => (
+        <div className={`bb-tile ${i < shown ? 'is-on' : 'is-bone'}`} key={t.id ?? i}>
+          {i < shown && t.src && <img src={t.src} alt={t.alt || ''} />}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// agrupa os sub-componentes sob BuildBlock.* (mesma primitiva, leitura única)
+BuildBlock.Line = BBLine
+BuildBlock.Bars = BBBars
+BuildBlock.Tally = BBTally
+BuildBlock.Image = BBImage
+BuildBlock.Grid = BBGrid
 
 // ════════════════════════════════════════════════════════════════════
 //  MOTOR DA CONVERSA · useAgentChat(script)
@@ -280,6 +472,7 @@ function ConnectCard({ connect, active, onConnected }) {
 // ════════════════════════════════════════════════════════════════════
 export function ChatPanel({ emp, chat, nextAgent, onNext }) {
   const { messages, thinking, chips, pickChip, streamingId, onStreamDone, pendingConnectId, onConnected } = chat
+  const zoom = useContext(ZoomCtx)
   const scrollRef = useRef(null)
   const chipRef = useRef(null)
   const prevStream = useRef(null)
@@ -291,9 +484,11 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages.length, thinking, streamingId])
 
-  // acompanha o texto crescendo durante o streaming (sem isso, o caret some da dobra)
+  // acompanha o texto crescendo durante o streaming (sem isso, o caret some da dobra).
+  // Em Modo demo o texto sai inteiro (sem char-a-char), então o loop de rAF só
+  // competiria com o vsync do encoder nos holds: o scrollTo único acima já basta.
   useEffect(() => {
-    if (!streamingId || prefersReduced()) return
+    if (!streamingId || prefersReduced() || zoom) return
     let raf = 0
     const loop = () => {
       const el = scrollRef.current
@@ -302,7 +497,7 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [streamingId])
+  }, [streamingId, zoom])
 
   // ao terminar uma resposta: foca o próximo chip (teclado) + anuncia a resposta (leitor)
   useEffect(() => {

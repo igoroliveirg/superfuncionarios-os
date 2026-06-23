@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
-import { useAgentChat, ChatPanel } from './chat.jsx'
+import { useAgentChat, ChatPanel, ZoomCtx } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
 import { resolvePack } from './niches/index.js'
@@ -649,7 +649,7 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
   )
 })
 
-function Desktop({ site, onPresent, pack }) {
+function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
   const [activeId, setActiveId] = useState('pesquisa') // janela única (ou null)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
@@ -680,11 +680,24 @@ function Desktop({ site, onPresent, pack }) {
 
   return (
     <div className="desktop">
-      {onPresent && (
-        <button className="present-launch" onClick={onPresent} title="Modo apresentação (passador de slides)">
-          <span className="pl-ic" aria-hidden="true">▶</span> Apresentar
-        </button>
-      )}
+      <div className="desk-chrome">
+        {onToggleZoom && (
+          <button
+            className={`demo-toggle${zoomMode ? ' is-on' : ''}`}
+            onClick={onToggleZoom}
+            aria-pressed={!!zoomMode}
+            title="Modo demo: otimiza o visual pro screen-share do Zoom (liga antes de compartilhar a tela)"
+          >
+            <span className="dt-dot" aria-hidden="true" />
+            Modo demo {zoomMode ? 'ligado' : 'desligado'}
+          </button>
+        )}
+        {onPresent && (
+          <button className="present-launch" onClick={onPresent} title="Modo apresentação (passador de slides)">
+            <span className="pl-ic" aria-hidden="true">▶</span> Apresentar
+          </button>
+        )}
+      </div>
       <div className="wallpaper">
         {!activeId && (
           <div className="wp-hint">
@@ -732,8 +745,11 @@ function Shell() {
   const [site, setSite] = useState('')
   const [bootLeaving, setBootLeaving] = useState(false)
   const [stageLeaving, setStageLeaving] = useState(false)
-  const [presenting, setPresenting] = useState(() =>
-    typeof window !== 'undefined' && /present/i.test(window.location.hash))
+  const presentInit = typeof window !== 'undefined' && /present/i.test(window.location.hash)
+  const [presenting, setPresenting] = useState(presentInit)
+  // Modo demo: mata blur/infinite/specular pro screen-share do Zoom. Liga manual
+  // no chrome e por padrão em Apresentação (#present já entra com ele ligado).
+  const [zoomMode, setZoomMode] = useState(presentInit)
   const prevPhaseRef = useRef('boot')
   const [niche, setNiche] = useState('generico')
   const [vars, setVars] = useState({})
@@ -750,6 +766,7 @@ function Shell() {
   const startPresent = useCallback(() => {
     document.documentElement.requestFullscreen?.().catch(() => {})
     setPresenting(true)
+    setZoomMode(true) // Apresentação liga Modo demo por padrão (mitiga "toggle esquecido")
   }, [])
   const stopPresent = useCallback(() => {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
@@ -760,9 +777,10 @@ function Shell() {
   useEffect(() => { prevPhaseRef.current = phase }, [phase])
 
   // brilho especular do vidro segue o cursor (princípio Apple Liquid Glass:
-  // o material reage ao movimento). rAF-throttled; desligado em reduced-motion.
+  // o material reage ao movimento). rAF-throttled; desligado em reduced-motion
+  // e em Modo demo (o radial reativo vira ruído sob o bitrate do Zoom).
   useEffect(() => {
-    if (prefersReduced()) return
+    if (prefersReduced() || zoomMode) return
     let raf = 0
     const onMove = (e) => {
       if (raf) return
@@ -775,7 +793,7 @@ function Shell() {
     }
     window.addEventListener('pointermove', onMove)
     return () => { window.removeEventListener('pointermove', onMove); if (raf) cancelAnimationFrame(raf) }
-  }, [])
+  }, [zoomMode])
 
   const goDesktop = () => {
     setStageLeaving(true)
@@ -823,7 +841,8 @@ function Shell() {
   else if (obPhase === 'analyze') card = <AnalyzeScreen site={site} onDone={finalize} />
 
   return (
-    <div className="app">
+    <ZoomCtx.Provider value={zoomMode}>
+    <div className={`app${zoomMode ? ' zoom-mode' : ''}`}>
       <div className="mobile-gate">
         <div className="mg-card">
           <div className="mg-mark"><Mark /></div>
@@ -850,12 +869,21 @@ function Shell() {
         />
       )}
 
-      {phase === 'desktop' && <Desktop site={site} onPresent={startPresent} pack={pack} />}
+      {phase === 'desktop' && (
+        <Desktop
+          site={site}
+          onPresent={startPresent}
+          pack={pack}
+          zoomMode={zoomMode}
+          onToggleZoom={() => setZoomMode((v) => !v)}
+        />
+      )}
 
       {presenting && (
         <Presentation site={site || 'superfuncionarios.ai'} onExit={stopPresent} />
       )}
     </div>
+    </ZoomCtx.Provider>
   )
 }
 

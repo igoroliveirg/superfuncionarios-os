@@ -463,7 +463,7 @@ function Analista({ accent, ink, site, step = 0, pack }) {
                   </defs>
                   <path className="trend-area" d={area} fill="url(#trendFill)" />
                   <path className="trend-line" d={line} fill="none" stroke={ink}
-                    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                    strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                 </svg>
                 <div className="trend-dots" aria-hidden="true">
                   {pts.map((p, i) => (

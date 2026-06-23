@@ -43,6 +43,11 @@
   /* 5 cores neon como vars (aurora + launcher) */
   --c-pesquisa: #ff4f9a; --c-copy: #9b6bff; --c-metricas: #33b9ff;
   --c-construtor: #ff8a3c; --c-social: #2fd49a;
+
+  /* ── <BuildBlock> · tokens da linguagem de build (os 5 outputs) ── */
+  --bb-bone: #e7e7ec;        /* esqueleto: 1 cor sólida, sem gradiente */
+  --bb-ink: var(--ink);      /* texto preenchido (escuro, AA) */
+  --bb-accent: var(--ink);   /* cor do cliente; cada output sobrescreve no contexto */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -816,6 +821,52 @@ body {
   .sat-bub { animation: none !important; transform: none !important; }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   MODO DEMO (.zoom-mode) · contrato de performance pro screen-share do Zoom
+   Liga manual no chrome (e por padrão em Apresentação). O codec H.264 baseline
+   come gradiente fino, blur, micro-movimento e loop infinito; aqui a gente mata
+   tudo isso pra cada `hold` virar frame de bitrate quase zero que o vendedor narra.
+   So matamos animações INFINITAS (que oscilam em torno de um estado visível) e o
+   blur/specular — nunca os reveals one-shot `opacity:0 + forwards`, que sumiriam.
+   Lista exaustiva: validar com `grep -n infinite styles.css` antes de mexer.
+   ════════════════════════════════════════════════════════════════════ */
+.zoom-mode .splash-stage,
+.zoom-mode .orbit-ring::before,
+.zoom-mode .orb,
+.zoom-mode .orb::after,
+.zoom-mode .splash-depth,
+.zoom-mode .particle,
+.zoom-mode .analyzing .spinner,
+.zoom-mode .wallpaper::before,
+.zoom-mode .core-ring,
+.zoom-mode .launcher.is-open .sat-bub,
+.zoom-mode .tw-caret,
+.zoom-mode .dots i,
+.zoom-mode .work-dot,
+.zoom-mode .emp-empty .ee-ic,
+.zoom-mode .lp-skeleton .sk,
+.zoom-mode .pub-dot,
+.zoom-mode .rot-dot,
+.zoom-mode .cc-spin {
+  animation: none !important;
+}
+/* 0 blur na janela ativa e no chrome: fundo opaco que o encoder segura */
+.zoom-mode .window,
+.zoom-mode .window .titlebar,
+.zoom-mode .chat-panel,
+.zoom-mode .boot-card,
+.zoom-mode .launcher-core,
+.zoom-mode .sat-bub,
+.zoom-mode .pres-chrome,
+.zoom-mode .pres-hint {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+.zoom-mode .window,
+.zoom-mode .chat-panel { background: #f9f9fb; }
+/* 0 specular: o radial mix-blend reativo ao cursor vira ruído sob bitrate baixo */
+.zoom-mode .launcher-core::after { display: none !important; }
+
 /* ═══ LIQUID GLASS · brilho especular reativo ao cursor (Apple) ════ */
 .launcher-core::after {
   content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: 2;
@@ -1223,9 +1274,15 @@ body {
 .trend-dots { position: absolute; inset: 0; pointer-events: none; }
 .trend-line {
   stroke-dasharray: 2000; stroke-dashoffset: 2000;
-  animation: trendDraw 1s var(--e-quart) 0.1s forwards;
+  /* traço-on quantizado em 5 passos: 5 frames discretos que o codec do Zoom
+     encoda limpo (steps), em vez de um draw contínuo que vira shimmer serrilhado
+     em fullscreen. non-scaling-stroke + stroke-width 3 (inline) seguram o traço. */
+  animation: trendDraw 1s steps(5, end) 0.1s forwards;
 }
 @keyframes trendDraw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .trend-line { animation: none !important; stroke-dashoffset: 0; }
+}
 .trend-area { opacity: 0; animation: fadeArea 0.7s var(--e-quart) 0.6s forwards; }
 @keyframes fadeArea { to { opacity: 1; } }
 .trend-dot {
@@ -2011,6 +2068,30 @@ body {
 .present-launch:hover { transform: translateY(-2px); box-shadow: 0 16px 40px -12px rgba(0,0,0,.28); }
 .present-launch .pl-ic { color: #2fbf6c; font-size: 11px; }
 
+/* chrome do desktop: agrupa o toggle de Modo demo + o botão Apresentar */
+.desk-chrome { position: fixed; right: 24px; bottom: 38px; z-index: 870; display: flex; align-items: center; gap: 10px; }
+.desk-chrome .present-launch { position: static; right: auto; bottom: auto; z-index: auto; }
+.demo-toggle {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); cursor: pointer;
+  padding: 10px 16px; border-radius: var(--r-pill);
+  background: var(--glass-tint-strong); border: 1px solid var(--glass-hairline);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: var(--glass-shadow-sm);
+  transition: transform 0.18s var(--e-quint), box-shadow 0.2s var(--e-quart), background 0.2s var(--e-quart);
+}
+.demo-toggle:hover { transform: translateY(-2px); }
+.demo-toggle .dt-dot { width: 9px; height: 9px; border-radius: 50%; background: #c7c7cc; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+.demo-toggle.is-on { background: #eafff3; border-color: #2fbf6c; color: #137a44; }
+.demo-toggle.is-on .dt-dot { background: #2fbf6c; box-shadow: 0 0 0 3px rgba(47,191,108,.22); }
+/* Modo demo ligado: o próprio chrome fica opaco (0 blur, regra do contrato) */
+.zoom-mode .demo-toggle, .zoom-mode .present-launch {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  background: #ffffff; box-shadow: 0 8px 24px -10px rgba(0,0,0,.25);
+}
+.zoom-mode .demo-toggle.is-on { background: #eafff3; }
+
 .pres { position: fixed; inset: 0; z-index: 2000; overflow: hidden; display: grid; place-items: center; }
 .pres-bg {
   position: absolute; inset: 0; z-index: 0;
@@ -2268,3 +2349,60 @@ body {
 .ps-levels-main .ps-ladder-foot { text-align: left; }
 .ps-levels-proof { flex: 0 0 33%; margin: 0; }
 @media (max-width: 920px) { .ps-levels { flex-direction: column; } .ps-levels-proof { flex: none; width: 60%; } }
+
+/* ════════════════════════════════════════════════════════════════════
+   <BuildBlock> · linguagem única dos 5 outputs (Fase 0: só a primitiva)
+   Gramática que o codec do Zoom encoda limpo: opacity/transform/custom-prop,
+   curva única (--e-quart), reveal de linha inteira, snap-lock, borda sólida de
+   conclusão. Sem materialização/blur, sem char-a-char, sem glow pulsante.
+   Ainda não há markup `.bb` nos funcionários — não muda nada visual nesta fase.
+   ════════════════════════════════════════════════════════════════════ */
+.bb { position: relative; transition: opacity 0.28s var(--e-quart); }
+.bb.is-idle { opacity: 0; }
+.bb.is-skeleton { opacity: 1; }                       /* esqueleto entra opacity 0→1 */
+.bb.is-fill, .bb.is-locked { opacity: 1; }
+/* conclusão = borda 2px sólida da cor do cliente (não glow de opacity, que some
+   sob bitrate baixo). O bloco congela. */
+.bb.is-locked { border: 2px solid var(--bb-accent); border-radius: var(--r-sm); }
+
+/* texto/headline: reveal de linha inteira, bone→ink em 360ms (nunca char-a-char) */
+.bb-line { color: var(--bb-bone); transition: color 0.36s var(--e-quart); }
+.bb.is-fill .bb-line, .bb.is-locked .bb-line { color: var(--bb-ink); }
+
+/* barras snap-lock: cresce por custom-prop (sem scaleX sub-pixel, sem box-shadow) */
+.bb-bars { display: flex; flex-direction: column; gap: 8px; }
+.bb-bar-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.bb-bar-k { font-size: 13px; color: var(--bb-ink); }
+.bb-bar-track { height: 14px; background: var(--bb-bone); border-radius: var(--r-xs); overflow: hidden; }
+.bb-bar-fill {
+  display: block; height: 100%; width: var(--bb-pct, 0%);
+  background: var(--bb-accent); border-radius: var(--r-xs);
+  /* snap-lock: anima a LARGURA por etapa, não scaleX; sem glow */
+  transition: width 0.38s var(--e-quart);
+}
+.bb-bar-v { font-size: 14px; font-weight: 800; color: var(--bb-ink); font-variant-numeric: tabular-nums; }
+
+/* número quantizado */
+.bb-tally { font-variant-numeric: tabular-nums; }
+
+/* imagem: caixa bone com selo do nicho → artefato brandado */
+.bb-img { position: relative; border-radius: var(--r-sm); overflow: hidden; background: var(--bb-bone); aspect-ratio: 1 / 1; }
+.bb-img.is-bone { display: flex; align-items: center; justify-content: center; }
+.bb-img-seal { font-size: 12px; font-weight: 800; color: color-mix(in srgb, var(--bb-ink) 45%, transparent); text-transform: uppercase; letter-spacing: 0.04em; }
+.bb-img-real { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; animation: bbImgIn 0.36s var(--e-quart) forwards; }
+@keyframes bbImgIn { to { opacity: 1; } }
+
+/* grade em ondas: tile vazio (bone) → preenchido */
+.bb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bb-tile { aspect-ratio: 1 / 1; border-radius: var(--r-xs); background: var(--bb-bone); overflow: hidden; }
+.bb-tile.is-on { animation: bbTileIn 0.3s var(--e-quart) forwards; }
+.bb-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes bbTileIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* reduced-motion / Modo demo: o build já é discreto e codec-friendly; só zeramos
+   as transições residuais pra cada hold virar frame estático de verdade. */
+@media (prefers-reduced-motion: reduce) {
+  .bb, .bb-line, .bb-bar-fill, .bb-img-real, .bb-tile { transition: none !important; animation: none !important; }
+  .bb-img-real { opacity: 1; }
+}
+.zoom-mode .bb-img-real { animation: none !important; opacity: 1; }
