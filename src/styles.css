@@ -1548,7 +1548,7 @@ body {
 }
 .lp-q-mark {
   position: absolute; top: 4px; left: 12px; font-size: 30px; line-height: 1;
-  color: rgba(255,138,60,0.35); font-family: Georgia, serif;
+  color: color-mix(in srgb, var(--lp-accent) 35%, transparent); font-family: Georgia, serif;
 }
 .lp-quote blockquote {
   position: relative; margin: 12px 0 12px; font-size: 12.5px; line-height: 1.5;
@@ -1571,7 +1571,7 @@ body {
 .lp-offer { margin-top: 30px; }
 .lp-eyebrow {
   display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-  text-transform: uppercase; color: #ff8a3c;
+  text-transform: uppercase; color: var(--lp-accent);
 }
 .lp-offer-h {
   margin-top: 8px; font-size: 20px; font-weight: 800; line-height: 1.18;
@@ -1588,8 +1588,8 @@ body {
 
 .lp-countdown {
   margin-top: 20px; padding: 16px; border-radius: var(--r-md);
-  background: linear-gradient(135deg, rgba(255,138,60,0.95), rgba(255,59,48,0.92));
-  box-shadow: 0 22px 60px -18px rgba(255,59,48,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--lp-accent) 95%, transparent), color-mix(in srgb, var(--lp-accent-2) 92%, transparent));
+  box-shadow: 0 22px 60px -18px color-mix(in srgb, var(--lp-accent-2) 50%, transparent), inset 0 1px 0 rgba(255,255,255,0.2);
 }
 .lp-cd-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .lp-cd-lab { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(255,255,255,0.95); }
@@ -1606,9 +1606,9 @@ body {
 .lp-guarantee {
   margin-top: 16px; display: flex; align-items: center; gap: 12px;
   padding: 13px 15px; border-radius: var(--r-md);
-  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,138,60,0.3);
+  background: rgba(255,255,255,0.04); border: 1px solid color-mix(in srgb, var(--lp-accent) 30%, transparent);
 }
-.lp-shield { font-size: 22px; flex: 0 0 auto; filter: drop-shadow(0 0 8px rgba(255,138,60,0.5)); }
+.lp-shield { font-size: 22px; flex: 0 0 auto; filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lp-accent) 50%, transparent)); }
 .lp-guarantee div { display: flex; flex-direction: column; gap: 2px; }
 .lp-guarantee b { font-size: 13px; color: #fff; }
 .lp-guarantee span { font-size: 11.5px; line-height: 1.4; color: rgba(255,255,255,0.7); }
