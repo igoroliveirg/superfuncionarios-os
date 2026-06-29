@@ -4,6 +4,8 @@ import { useAgentChat, ChatPanel, ZoomCtx } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
 import { resolvePack } from './niches/index.js'
+import { mergePack } from './niches/util.js'
+import { SavingsBar, resetSavings } from './savings.jsx'
 
 // Marca da Super Funcionários: três barras (eco do favicon do GDIA)
 function Mark() {
@@ -312,7 +314,7 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 
 function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack }) {
   const { ref, flyToDock } = useGenieWindow(origin)
-  const chat = useAgentChat(SCRIPTS[emp.id]) // conversa viva do agente ativo
+  const chat = useAgentChat(pack.scripts?.[emp.id] || SCRIPTS[emp.id]) // conversa viva do agente ativo (personalizada via pack)
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
   const nextAgent = _i < EMPLOYEES.length - 1 ? EMPLOYEES[_i + 1] : null // último encerra o ciclo
 
@@ -378,7 +380,7 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen,
         </div>
       </div>
       <div className="window-body has-chat" ref={bodyRef}>
-        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} />
+        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} onOpenAgent={onOpen} />
       </div>
       <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} />
     </div>
@@ -649,8 +651,39 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
   )
 })
 
+// hub radial dos 5 (Onda 3): estado idle do desktop. Cada avatar abre o agente
+// (reusa onOpen, com o rect pro genie). Porta o dashboard da spec os-spec/real.
+const HUB_POS = ['n-top', 'n-ur', 'n-lr', 'n-ll', 'n-ul']
+function HubDashboard({ onOpen, site }) {
+  return (
+    <div className="hub-dash">
+      <div className="hub">
+        <div className="hub-ring" aria-hidden="true" />
+        <div className="hub-center" aria-hidden="true"><span /></div>
+        {EMPLOYEES.map((e, i) => (
+          <button
+            key={e.id}
+            className={`hub-node ${HUB_POS[i] || ''}`}
+            style={{ '--c': e.color }}
+            aria-label={`Ver ${e.name}`}
+            onClick={(ev) => {
+              const r = ev.currentTarget.getBoundingClientRect()
+              onOpen(e.id, { x: r.left, y: r.top, w: r.width, h: r.height })
+            }}
+          >
+            <img src={e.img} alt="" />
+          </button>
+        ))}
+      </div>
+      <h2 className="hub-title">Seus 5 super funcionários estão prontos.</h2>
+      <p className="hub-sub">Toque num funcionário pra ver o que ele já produziu pra <b>{site}</b>. Não são 5 chats: é uma <b>esteira</b>, um alimenta o próximo.</p>
+      <SavingsBar eq="o trabalho de um time de marketing, sem folha de pagamento" />
+    </div>
+  )
+}
+
 function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
-  const [activeId, setActiveId] = useState('pesquisa') // janela única (ou null)
+  const [activeId, setActiveId] = useState(null) // idle → hub radial; abre 1 janela por vez
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
 
@@ -699,12 +732,7 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
         )}
       </div>
       <div className="wallpaper">
-        {!activeId && (
-          <div className="wp-hint">
-            <h2>Seus 5 super funcionários estão prontos.</h2>
-            <p>Toque no círculo flutuante e escolha quem você quer ver, pra <b>{site}</b>.</p>
-          </div>
-        )}
+        {!activeId && <HubDashboard onOpen={open} site={site} />}
         {emp && (
           <Window
             key={emp.id}
@@ -753,14 +781,20 @@ function Shell() {
   const prevPhaseRef = useRef('boot')
   const [niche, setNiche] = useState('generico')
   const [vars, setVars] = useState({})
+  const [gen, setGen] = useState(null) // conteúdo gerado pela IA a partir do site real
   const identifyRef = useRef(null)
-  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio)
-  const pack = useMemo(() => resolvePack(niche, {
-    empresa: vars.empresa || 'superfuncionarios',
-    oferta: vars.oferta || 'a imersão',
-    primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
-    theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
-  }), [niche, vars])
+  const generateRef = useRef(null)
+  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio),
+  // e por cima o conteúdo personalizado do site (gen). Sem gen → molde do nicho.
+  const pack = useMemo(() => {
+    const base = resolvePack(niche, {
+      empresa: vars.empresa || 'superfuncionarios',
+      oferta: vars.oferta || 'a imersão',
+      primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
+      theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
+    })
+    return gen ? mergePack(base, gen) : base
+  }, [niche, vars, gen])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -803,6 +837,7 @@ function Shell() {
   // ao analisar o site: dispara a identificação do nicho (1 chamada real) por
   // baixo da animação que já existe. Override de palco: #niche=<id> pula a chamada.
   const startAnalyze = useCallback((url) => {
+    resetSavings() // cada análise/demo começa o contador do zero e ele sobe a cada agente
     setSite(url)
     setPhase('analyze')
     const m = typeof window !== 'undefined' && window.location.hash.match(/niche=([a-z]+)/i)
@@ -813,13 +848,27 @@ function Shell() {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
       }).then((r) => r.json()).catch(() => ({ niche: 'generico' }))
     }
+    // em paralelo: gera o conteúdo personalizado a partir do site real (a chamada
+    // pesada). #nogen pula a geração (mostra o molde do nicho, p/ palco/offline).
+    const skipGen = typeof window !== 'undefined' && /nogen/i.test(window.location.hash)
+    generateRef.current = skipGen ? Promise.resolve(null) : fetch('/api/generate', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
+    }).then((r) => r.json()).catch(() => null)
   }, [])
 
-  // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
+  // ao fim da animação: aguarda identificação + geração (timeout 30s → molde) e entra.
   const finalize = useCallback(async () => {
-    const timeout = new Promise((res) => setTimeout(() => res(null), 15000))
-    const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(() => res(null), ms))])
+    // identify (leve) e generate (pesada) já disparam em paralelo no startAnalyze;
+    // aguardamos as duas em paralelo, sob um único orçamento de 30s (não em série,
+    // senão um hang da identify roubaria até 30s antes de a geração ser lida).
+    const [outRaw, genOut] = await Promise.all([
+      identifyRef.current ? withTimeout(identifyRef.current, 30000) : Promise.resolve(null),
+      generateRef.current ? withTimeout(generateRef.current, 30000) : Promise.resolve(null),
+    ])
+    const out = outRaw || {}
     if (out.niche) setNiche(out.niche)
+    if (genOut && !genOut._error) setGen(genOut)
     // overrides de palco (sites blindados não expõem nada): #theme=light|dark e
     // #color=rrggbb forçam tema e cor da marca manualmente.
     const hash = typeof window !== 'undefined' ? window.location.hash : ''

@@ -486,6 +486,27 @@ function ConnectCard({ connect, active, onConnected }) {
   )
 }
 
+// motor de produção visível (Onda 2): ferramentas que "rodam" enquanto o agente
+// pensa — nomeia o trabalho real (HeyGen, ElevenLabs, cruzando reviews…).
+const PRODUCE_STEPS = {
+  pesquisa: ['lendo o site', 'cruzando reviews e concorrentes', 'extraindo dores reais', 'rankeando ângulos'],
+  copywriter: ['lendo a pesquisa', 'escrevendo 4 ângulos', 'prevendo o CTR', 'montando o formulário'],
+  construtor: ['aplicando a copy', 'gerando os designs', 'avatar HeyGen + voz ElevenLabs', 'legenda e corte ffmpeg'],
+  conteudo: ['lendo os pilares', 'gerando ganchos', 'montando o calendário', 'escrevendo o roteiro'],
+  metricas: ['conectando pixel e CRM', 'montando o funil', 'calculando CAC e ROAS', 'achando onde vaza'],
+}
+function ProduceLog({ id }) {
+  const steps = PRODUCE_STEPS[id] || []
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (!steps.length || prefersReduced()) return
+    const t = setInterval(() => setI((v) => (v + 1) % steps.length), 480)
+    return () => clearInterval(t)
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!steps.length) return null
+  return <span className="produce-log">▸ {steps[i]}…</span>
+}
+
 // ════════════════════════════════════════════════════════════════════
 //  ChatPanel · painel de vidro flutuante à direita
 // ════════════════════════════════════════════════════════════════════
@@ -560,6 +581,7 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
         {thinking && (
           <div className="bubble agent thinking reveal" aria-hidden="true">
             <span className="dots"><i /><i /><i /></span>
+            <ProduceLog id={emp.id} />
           </div>
         )}
       </div>

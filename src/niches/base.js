@@ -56,6 +56,13 @@ export const BASE_PACK = {
       { f: 'Avaliações Google', n: 980 },
       { f: 'Fóruns e Reddit', n: 470 },
     ],
+    // ângulos de venda rankeados por potencial (Onda 3) — base do anúncio
+    angulos: [
+      { rank: 1, nome: 'Sem folha de pagamento', score: 94, why: 'Bate na dor nº 1 (custo de time). É o que o mercado pede em voz alta.' },
+      { rank: 2, nome: 'Funciona 24h, nunca falta', score: 88, why: 'Responde a quem teme depender de gente cara e lenta.' },
+      { rank: 3, nome: '2× vendas na mesma verba', score: 81, why: 'Prova de eficiência pra quem já gasta em anúncio.' },
+      { rank: 4, nome: 'Monta em 30 dias', score: 73, why: 'Remove a objeção de tempo de implantação.' },
+    ],
   },
 
   // ── 02 · O Redator que Filtra ───────────────────────────────────
@@ -134,9 +141,26 @@ export const BASE_PACK = {
       { kind: 'fix', t: 'Conserte o meio da página', d: 'Bloco "Mecanismo" perde 19% do scroll. Encurtar sobe a conversão de 6,8% pra ~8%.' },
       { kind: 'scale', t: 'Orgânico é verba grátis', d: 'Reels geram 53 leads sem gasto. Mais 3 por semana no mesmo ângulo.' },
     ],
+    // onde vaza dinheiro (Onda 2): a etapa do FUNNEL que perde + a perda mensal
+    leak: {
+      stage: 'Reuniões',          // casa com FUNNEL[i].k (que mostra 41%)
+      lostPerMonth: 'R$ 62 mil',
+      expectedPct: 55, actualPct: 41,
+      reason: '59% dos leads não viram reunião. O tempo médio de resposta é 4h20, e o lead esfria.',
+    },
+    // ação recomendada, atribuída a OUTROS agentes (a esteira se auto-corrige)
+    action: {
+      title: 'Ação recomendada',
+      sub: 'Não é "rode mais anúncio". É tampar o furo entre o lead e a agenda.',
+      items: [
+        { who: 'rotina', label: 'Rotina', text: 'Responder todo lead em até 2 minutos, automático.' },
+        { who: 'copy', label: 'Copywriter', text: 'Reescrever a primeira mensagem de WhatsApp.' },
+        { who: 'pesquisa', label: 'Pesquisador', text: 'Validar a objeção "preço" (58% das conversas perdidas).' },
+      ],
+    },
   },
 
-  // ── 04 · O Construtor de Páginas ────────────────────────────────
+  // ── 04 · O Construtor (criativos + páginas) ─────────────────────
   construtor: {
     brandColor: '{cor}', // cor da marca do cliente (interpolada do site)
     theme: '{theme}',    // 'light' | 'dark' detectado do site (vazio = escuro)
@@ -192,6 +216,28 @@ export const BASE_PACK = {
       guaranteeTitle: 'Garantia de aplicação',
       guaranteeText: 'Saiu sem os 5 rodando? A gente fica até rodar. Risco é nosso.',
     },
+    // criativos do anúncio (story 9:16 + feed 1:1) montados a partir da copy
+    designs: {
+      brand: '{empresa}',
+      hook: 'Sem folha de pagamento.',
+      sub: '5 funcionários de IA que vendem por você, 24h.',
+      cta: 'Quero meus 5 funcionários',
+      variacoes: ['A', 'B', 'C'],
+      formatos: ['STORY 9:16', 'FEED 1:1'],
+    },
+    // vídeo gerado: avatar (HeyGen) + voz (ElevenLabs) + legenda palavra a palavra
+    video: {
+      duracao: '22s',
+      caption: 'Esse funcionário trabalha 24h e nunca pede aumento.',
+      modulos: [
+        { nm: 'Avatar do apresentador', by: 'HeyGen' },
+        { nm: 'Voz sintética natural', by: 'ElevenLabs' },
+        { nm: 'Legenda palavra a palavra', by: 'auto-sync' },
+        { nm: 'Corte story e feed', by: 'ffmpeg' },
+      ],
+      timeline: [{ l: 'hook', f: 1 }, { l: 'corpo', f: 2 }, { l: 'cta', f: 1 }],
+      formatos: ['Story 9:16', 'Feed 1:1'],
+    },
   },
 
   // ── 05 · O Criador de Conteúdo ──────────────────────────────────
@@ -245,7 +291,8 @@ export const BASE_PACK = {
         { chip: 'Desenhar o cliente ideal', reply: 'O seu comprador tem nome: Ricardo, 43, fatura R$ 180 mil/mês, tem 2 vendedores e é o gargalo do próprio negócio. Não é iniciante curioso, é dono cansado de pagar caro por lead lixo.' },
         { chip: 'Trazer dores, medos e desejos', reply: 'Tudo na fala dele, não na minha. "O time está ocupado mas não cresce." "Antes o telefone tocava, agora gasto o dobro e vendo a metade." É daqui que o Copywriter tira a primeira linha do anúncio.' },
         { chip: 'Priorizar as objeções', reply: 'Ranqueei o que trava a venda, da mais comum pra menos. "Já tentei IA e não funcionou" lidera 41%. Pra cada uma já deixei o contra-argumento pronto pro Redator usar.' },
-        { chip: 'Medir o nível de consciência', reply: 'Ele está no nível 3 de Schwartz: sabe que "IA pra negócio" existe, não sabe qual mecanismo resolve. Mercado saturado (sofisticação 3-4): promessa genérica morre, mecanismo único vende. Persona, dores, objeções e nível: entrego tudo pronto pro Copywriter virar anúncio.' },
+        { chip: 'Medir o nível de consciência', reply: 'Ele está no nível 3 de Schwartz: sabe que "IA pra negócio" existe, não sabe qual mecanismo resolve. Mercado saturado (sofisticação 3-4): promessa genérica morre, mecanismo único vende.' },
+        { chip: 'Rankear os ângulos de venda', reply: 'Por fim, rankeei os ângulos por potencial de venda: o que bate na dor nº 1 lidera. Cada um já vai com a nota e o porquê, pronto pro Copywriter transformar em headline.' },
       ],
     },
     copywriter: {
@@ -293,12 +340,13 @@ export const BASE_PACK = {
     },
     construtor: {
       greeting:
-        'Eu monto sua página de vendas inteira a partir do que o seu site já diz: estrutura, texto, prova, oferta e publicação. Por onde começamos?',
+        'Eu construo o que precisa subir: criativos (design e vídeo) e páginas. Peguei a copy do Copywriter, já com a oferta e a sua voz. O que monto primeiro?',
       turns: [
-        { chip: 'Montar a estrutura', reply: 'Fechei a espinha da página em 7 blocos, na ordem que faz o empresário rolar até o botão: promessa no topo, prova e mecanismo no meio, oferta e formulário no fim. Olha a lista montando à esquerda.' },
-        { chip: 'Escrever o hero', reply: 'Hero pronto, puxando a promessa do seu site: badge da imersão, headline que para o scroll, subtítulo e o botão de candidatura. A página já começa a ganhar cara de verdade à direita.' },
-        { chip: 'Puxar a prova social', reply: 'Coloquei os números que sustentam a oferta e três depoimentos de quem aplicou. Prova é o que tira o "será que funciona pra mim?" da cabeça do lead antes dele ver o preço.' },
-        { chip: 'Montar a oferta', reply: 'Oferta fechada: o que ele monta na imersão, a contagem regressiva com data e lugar, e a garantia logo abaixo. É aqui que a decisão acontece, então o risco fica do nosso lado.' },
+        { chip: 'Montar os designs do anúncio', reply: 'Apliquei a copy do anúncio campeão em dois formatos, story 9:16 e feed 1:1, com três tratamentos pra testar. Mesma mensagem, três caras. Olha à direita.' },
+        { chip: 'Gerar o vídeo com avatar e voz', reply: 'Montei um vídeo de 22 segundos: avatar apresentador, voz sintética natural e legenda palavra a palavra, já cortado pra story e feed. Sem gravar nada, sem estúdio.' },
+        { chip: 'Montar a página', reply: 'Fechei a estrutura e o hero, puxando a promessa do seu site: headline que para o scroll, subtítulo e o botão de candidatura. A página já ganha cara de verdade à direita.' },
+        { chip: 'Puxar a prova social', reply: 'Coloquei os números que sustentam a oferta e depoimentos de quem aplicou. Prova é o que tira o "será que funciona pra mim?" da cabeça do lead antes dele ver o preço.' },
+        { chip: 'Montar a oferta', reply: 'Oferta fechada: o que ele leva, a contagem regressiva com data e lugar, e a garantia logo abaixo. É aqui que a decisão acontece, então o risco fica do nosso lado.' },
         { chip: 'Ver no celular', reply: 'Mesma página, layout de celular. 7 em cada 10 leads chegam pelo Instagram, então a versão mobile é a que mais vende. Toca pra alternar entre desktop e celular.' },
         {
           chip: 'Publicar agora',

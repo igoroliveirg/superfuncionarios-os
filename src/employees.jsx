@@ -2,6 +2,7 @@ import React from 'react'
 import { Section, fmt, BuildBlock } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
 import { safeAccent } from './niches/color.js'
+import { SavingsBar, recordArtifact } from './savings.jsx'
 
 // ── Metadados dos 5 super funcionários ───────────────────────────────
 // color = neon de assinatura (glows, dots, bordas) · ink = variante escura
@@ -27,9 +28,9 @@ export const EMPLOYEES = [
   },
   {
     id: 'construtor',
-    name: 'O Construtor de Páginas',
-    role: 'Página de vendas no ar em 24h',
-    code: 'AG.PAGINA',
+    name: 'O Construtor',
+    role: 'Criativos (design e vídeo) e página no ar',
+    code: 'AG.CONSTRUTOR',
     img: '/agentes/construtor.png',
     color: '#ff8a3c', ink: '#a8500e', glow: 'rgba(255,138,60,.55)',
     win: { w: 860, h: 580, x: 130, y: 70 },
@@ -101,7 +102,7 @@ function Pill({ children, ink }) {
 // Output gated por `step` (0..6). Cada seção aparece quando step > i e
 // entra com .reveal. Texto de corpo em superfície sólida (#fff / #f7f8fa).
 function Pesquisador({ step = 0, accent, ink, site, pack }) {
-  const { persona, dores, medos, desejos, objecoes, schwartz, nivelAtivo, fontes } = pack.pesquisa
+  const { persona, dores, medos, desejos, objecoes, schwartz, nivelAtivo, fontes, angulos = [] } = pack.pesquisa
 
   return (
     <div className="emp pesq">
@@ -110,7 +111,7 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
           <h2>Pesquisa de mercado</h2>
           <p className="muted">Fonte: {site} · público de empresários high-ticket</p>
         </div>
-        {step >= 5
+        {step >= 6
           ? <Pill ink={ink}>Concluído</Pill>
           : <span className="pill working" style={{ borderColor: accent, color: ink }}>
               <span className="work-dot" style={{ background: accent }} /> Analisando
@@ -223,6 +224,28 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
           </div>
         </div>
       </Section>
+
+      {/* ângulos rankeados por potencial de venda (Onda 3) */}
+      {angulos.length > 0 && (
+        <Section show={step > 5}>
+          <SectionTitle accent={accent}>Ângulos rankeados por potencial de venda</SectionTitle>
+          <div className="pa-angles">
+            {[...angulos].sort((a, b) => b.score - a.score).map((a, i) => (
+              <div key={i} className="pa-row" style={{ '--ad': `${i * 0.07}s` }}>
+                <span className="pa-rk" style={{ color: accent }}>{i + 1}</span>
+                <div className="pa-main">
+                  <div className="pa-head">
+                    <span className="pa-nm">{a.nome}</span>
+                    <span className="pa-sc" style={{ color: ink }}>{a.score}</span>
+                  </div>
+                  <div className="pa-track"><span className="pa-fill" style={{ width: `${a.score}%`, background: accent }} /></div>
+                  <p className="pa-why">{a.why}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
     </div>
   )
@@ -376,7 +399,8 @@ function RoiStat({ from, to, label, prefix = '', suffix = '', dec = 0, ink }) {
 }
 
 function Analista({ accent, ink, site, step = 0, pack }) {
-  const { FUNNEL, STAGE_COST, TREND, CHANNELS, CREATIVES, PAGE, PAGE_SECTIONS, CONTENT, FINAL } = pack.metricas
+  const { FUNNEL, STAGE_COST, TREND, CHANNELS, CREATIVES, PAGE, PAGE_SECTIONS, CONTENT, FINAL, leak, action } = pack.metricas
+  const [fired, setFired] = React.useState(false)
   const fmtInt = (n) => n.toLocaleString('pt-BR')
   const peak = Math.max(...TREND)
   const W = 460, H = 120, pad = 6
@@ -423,8 +447,10 @@ function Analista({ accent, ink, site, step = 0, pack }) {
       <Section show={step > 1}>
         <SectionTitle accent={accent}>Funil · do anúncio à venda</SectionTitle>
         <div className="funnel">
-          {FUNNEL.map((f, i) => (
-            <div key={f.k} className="fn-row fn-row-metr" style={{ '--ac': accent }}>
+          {FUNNEL.map((f, i) => {
+            const isLeak = leak && f.k === leak.stage
+            return (
+            <div key={f.k} className={`fn-row fn-row-metr ${isLeak ? 'fn-leak' : ''}`} style={{ '--ac': accent }}>
               <div className="fn-meta">
                 <span className="fn-k">{f.k}</span>
                 <span className="fn-sub">{f.sub}</span>
@@ -432,20 +458,57 @@ function Analista({ accent, ink, site, step = 0, pack }) {
               <div className="fn-bar-wrap">
                 <div
                   className="fn-bar building"
-                  style={{ '--w': `${Math.max(f.pct, 6)}%`, '--d': `${i * 70}ms`, background: ink }}
+                  style={{ '--w': `${Math.max(f.pct, 6)}%`, '--d': `${i * 70}ms`, background: isLeak ? '#d23b3b' : ink }}
                 >
                   <span className="fn-bv">{fmtInt(f.v)}</span>
                 </div>
               </div>
               {i > 0 && (
-                <span className="fn-conv" style={{ color: ink }}>
+                <span className="fn-conv" style={{ color: isLeak ? '#c0392b' : ink }}>
                   {f.pct}% <i>↘</i>
                 </span>
               )}
             </div>
-          ))}
+          )})}
         </div>
       </Section>
+
+      {/* 1b · Onde vaza dinheiro + ação que dispara a esteira (Onda 2) */}
+      {leak && action && (
+        <Section show={step > 1}>
+          <div className="leak-grid">
+            <div className="leakbox">
+              <h4>● Onde vaza dinheiro</h4>
+              <div className="leak-lost">− {leak.lostPerMonth} / mês</div>
+              <p>{leak.reason} Levar os {leak.actualPct}% pros {leak.expectedPct}% do nicho rende mais venda com a mesma verba.</p>
+            </div>
+            <div className="actionbox">
+              <h4>{action.title}</h4>
+              <p className="muted" style={{ fontSize: 12.5 }}>{action.sub}</p>
+              <ul className="fix-list">
+                {action.items.map((a, i) => (
+                  <li key={i}><span className={`who who-${a.who}`}>{a.label}</span><span>{a.text}</span></li>
+                ))}
+              </ul>
+              <div className="fire">
+                <button className="chip-mini" onClick={() => setFired(true)} disabled={fired}>
+                  {fired ? 'Correção disparada ✓' : 'Disparar correção'}
+                </button>
+                {fired && (
+                  <div className="fired reveal">
+                    <span className="klabel-sm">Esteira reiniciada — o Analista chamou os agentes sozinho</span>
+                    <div className="fired-row">
+                      <span className="fa"><i style={{ background: '#ff4f9a' }} /> Pesquisador ✓</span>
+                      <span className="fa"><i style={{ background: '#9b6bff' }} /> Copywriter ✓</span>
+                      <span className="fa"><i style={{ background: '#2fd49a' }} /> Rotinas ✓</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* 2 · Tendência + custo por etapa */}
       <Section show={step > 2}>
@@ -656,20 +719,93 @@ function Analista({ accent, ink, site, step = 0, pack }) {
   )
 }
 
-// ── 04 · O Construtor de Páginas ─────────────────────────────────────
-// Preview = landing escura real (vibe GDIA: purple-black + glow laranja).
-// Vidro só no chrome (lp-chrome). Corpo em superfície sólida escura (AA).
-// Toggle Desktop/Celular funcional. Tudo gated por step.
+// ── 04 · O Construtor ────────────────────────────────────────────────
+// Constrói os criativos (designs story/feed + vídeo avatar/voz/legenda) E a
+// página (preview escuro real). Três artefatos gated por step (A/B/C).
+// Toggle Desktop/Celular funcional. Vidro só no chrome (lp-chrome).
+
+// criativo (story 9:16 / feed 1:1) montado a partir da copy do anúncio
+function CreativeCard({ cls, fmt, d }) {
+  return (
+    <div className={`creative ${cls}`}>
+      <span className="cr__fmt">{fmt}</span>
+      <div className="cr__b">
+        <span className="cr__brand">{d.brand}</span>
+        <p className="cr__hook">{d.hook}</p>
+        <p className="cr__sub">{d.sub}</p>
+        <span className="cr__cta">{d.cta}</span>
+      </div>
+      <span className="cr__line" />
+    </div>
+  )
+}
+
+// vídeo: player com legenda palavra a palavra + "como foi montado" + timeline
+function VideoArtifact({ video, accent }) {
+  const [fmt, setFmt] = React.useState('story')
+  const words = (video.caption || '').split(/\s+/).filter(Boolean)
+  const [hl, setHl] = React.useState(0)
+  React.useEffect(() => {
+    if (!words.length) return
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (reduce) { setHl(words.length - 1); return }
+    const t = setInterval(() => setHl((h) => (h + 1) % words.length), 360)
+    return () => clearInterval(t)
+  }, [words.length])
+  const wave = [40, 70, 30, 90, 55, 80, 35, 60, 95, 45, 70, 50, 85, 40, 65, 30, 75, 55, 90, 60, 35, 80]
+  return (
+    <div className="vwrap reveal">
+      <div className={`player ${fmt === 'feed' ? 'feed' : ''}`}>
+        <span className="badge">AVATAR · HeyGen</span>
+        <div className="av"><i>▶</i></div>
+        <div className="cap">
+          {words.map((w, i) => (
+            <span key={i} className={`w ${i <= hl ? 'on' : ''} ${i === hl ? 'hl' : ''}`}>{w} </span>
+          ))}
+        </div>
+        <div className="play">▶</div>
+      </div>
+      <div className="vside">
+        <span className="klabel-sm">Como foi montado</span>
+        <div className="mods">
+          {(video.modulos || []).map((m, i) => (
+            <div key={i} className="mod"><span className="d" /><span className="nm">{m.nm}</span><span className="by">{m.by}</span></div>
+          ))}
+        </div>
+        <span className="klabel-sm">Timeline ({video.duracao})</span>
+        <div className="vtl" style={{ margin: '8px 0 12px' }}>
+          <div className="vtl-track">
+            {(video.timeline || []).map((t, i) => (
+              <div key={i} className="vtl-cell" style={{ flex: t.f }}><span>{t.l}</span></div>
+            ))}
+          </div>
+          <div className="wave">{wave.map((v, i) => <i key={i} style={{ height: `${v}%` }} />)}</div>
+        </div>
+        <div className="vfmt">
+          <span className="klabel-sm">Formato</span>
+          <div className="seg">
+            {(video.formatos || ['Story 9:16', 'Feed 1:1']).map((f, i) => {
+              const key = i === 0 ? 'story' : 'feed'
+              return <button key={f} className={fmt === key ? 'on' : ''} onClick={() => setFmt(key)}>{f}</button>
+            })}
+          </div>
+          <button className="chip-mini" style={{ marginLeft: 'auto' }}>Exportar MP4</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Construtor({ accent, ink, site, step = 0, pack }) {
   const [device, setDevice] = React.useState('desktop')
   // ao chegar no passo "ver no celular", troca pro mobile sozinho (1×) —
   // no deck ninguém clica no toggle, então sem isso "nada muda"
   const switchedRef = React.useRef(false)
   React.useEffect(() => {
-    if (step > 4 && !switchedRef.current) { switchedRef.current = true; setDevice('mobile') }
+    if (step > 5 && !switchedRef.current) { switchedRef.current = true; setDevice('mobile') }
   }, [step])
 
-  const { blocos, ticker, depoimentos, countdown, hero, includes, offer } = pack.construtor
+  const { designs, video, blocos, ticker, depoimentos, countdown, hero, includes, offer } = pack.construtor
 
   // identidade visual da landing = cor da marca do cliente (validada p/ tema
   // escuro); se não houver cor utilizável, cai no accent do nicho; senão laranja.
@@ -679,12 +815,14 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
   // no tema claro o realce de texto usa a variante mais escura (contraste no branco)
   const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': light ? themed.accent2 : themed.grad } : undefined
 
-  const showBlocos = step > 0
-  const showHero = step > 1
-  const showProva = step > 2
-  const showOferta = step > 3
-  const showMobile = step > 4   // turn "ver no celular" libera o toggle
-  const showPublicado = step > 5
+  const showDesigns = step > 0  // A · designs do anúncio
+  const showVideo = step > 1    // B · vídeo gerado
+  const showBlocos = step > 2   // C · estrutura da página
+  const showHero = step > 2
+  const showProva = step > 3
+  const showOferta = step > 4
+  const showMobile = step > 5   // turn "ver no celular" libera o toggle
+  const showPublicado = step > 6
 
   const dev = showMobile ? device : 'desktop'
 
@@ -692,12 +830,46 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
     <div className="emp build" style={{ '--accent': accent, '--accent-ink': ink }}>
       <div className="emp-head">
         <div>
-          <h2>Construtor de páginas</h2>
-          <p className="muted">Montando a partir de {site}</p>
+          <h2>O Construtor</h2>
+          <p className="muted">Criativos e página a partir de {site}</p>
         </div>
         <Pill ink={ink}>{showPublicado ? 'No ar' : 'Montando…'}</Pill>
       </div>
 
+      {/* A · DESIGNS do anúncio */}
+      <section className="sec-block cnv-block">
+        <span className="block-tab"><span className="b">A</span> Designs do anúncio</span>
+        {showDesigns ? (
+          <div className="pair reveal">
+            <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY 9:16'} d={designs} />
+            <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED 1:1'} d={designs} />
+            <div className="vars-side">
+              <span className="klabel-sm">Variações</span>
+              <div className="vars">
+                {(designs.variacoes || ['A', 'B', 'C']).map((v, i) => (
+                  <div key={v} className={`vt ${i === 0 ? 'sel' : ''}`}>
+                    <span>{v}</span>
+                    <i style={i ? { background: ['#9b6bff', '#2fd49a'][i - 1] || accent } : undefined} />
+                  </div>
+                ))}
+              </div>
+              <p className="muted" style={{ fontSize: 12.5 }}>Mesma copy, 3 tratamentos. A versão A foi marcada como a mais forte.</p>
+              <button className="chip-mini" style={{ marginTop: 10 }}>Exportar PNG (4 formatos)</button>
+            </div>
+          </div>
+        ) : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1.</div>}
+      </section>
+
+      {/* B · VÍDEO gerado e editado */}
+      <section className="sec-block cnv-block">
+        <span className="block-tab"><span className="b">B</span> Vídeo gerado e editado</span>
+        {showVideo
+          ? <VideoArtifact video={video} accent={accent} />
+          : <div className="blk-empty">Avatar (HeyGen) + voz (ElevenLabs) + legenda palavra a palavra.</div>}
+      </section>
+
+      {/* C · PÁGINA publicada */}
+      <span className="block-tab"><span className="b">C</span> Página publicada</span>
       <div className="builder">
         {/* ── lista de blocos à esquerda ── */}
         <div className="blk-list">
@@ -775,7 +947,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
                     </div>
                   )}
                   <h1 className="lp-h1">
-                    {showHero && step === 2
+                    {showHero && step === 3
                       ? <BuildBlock.Line as="span" className="lp-h1-line">{hero.h1Typed}</BuildBlock.Line>
                       : <>{hero.h1Pre}<span className="lp-grad">{hero.h1Grad}</span>{hero.h1Post}</>}
                   </h1>
@@ -1112,8 +1284,18 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
   )
 }
 
-// ── Roteador de conteúdo por funcionário ─────────────────────────────
-export function EmployeeContent({ id, accent, ink, site, step = 0, pack }) {
+// ── Economia por agente (quanto cada um substitui) ───────────────────
+// money/hours somam UMA vez quando o agente entrega o 1º artefato (dedup por
+// id no savings store). eq = equivalência mostrada na faixa daquele agente.
+const SAVE = {
+  pesquisa: { money: 8200, hours: 38, eq: 'uma pesquisa de agência: R$ 8.000 e 2 semanas' },
+  copywriter: { money: 5400, hours: 26, eq: 'um redator sênior dedicado, sem o salário' },
+  construtor: { money: 13000, hours: 86, eq: 'designer + editor + dev: 3 contratações num agente' },
+  conteudo: { money: 4200, hours: 40, eq: 'um social media inteiro, no piloto automático' },
+  metricas: { money: 4000, hours: 30, eq: 'um analista de dados lendo o funil todo dia' },
+}
+
+function agentPanel({ id, accent, ink, site, step, pack }) {
   switch (id) {
     case 'pesquisa': return <Pesquisador accent={accent} ink={ink} site={site} step={step} pack={pack} />
     case 'copywriter': return <Redator accent={accent} ink={ink} site={site} step={step} pack={pack} />
@@ -1122,4 +1304,38 @@ export function EmployeeContent({ id, accent, ink, site, step = 0, pack }) {
     case 'conteudo': return <CriadorDeConteudo accent={accent} ink={ink} step={step} pack={pack} />
     default: return null
   }
+}
+
+// ── Roteador de conteúdo por funcionário + esteira + contador ─────────
+export function EmployeeContent({ id, accent, ink, site, step = 0, pack, onOpenAgent }) {
+  const save = SAVE[id]
+  // ao entregar o 1º artefato (step>=1), credita a economia do agente (1×)
+  const produced = step >= 1
+  React.useEffect(() => {
+    if (produced && save) recordArtifact(id, save.money, save.hours)
+  }, [produced, id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const i = EMPLOYEES.findIndex((e) => e.id === id)
+  const next = i >= 0 && i < EMPLOYEES.length - 1 ? EMPLOYEES[i + 1] : null
+  const nextLabel = next ? next.name.replace(/^O\s+/, '') : ''
+
+  const panel = agentPanel({ id, accent, ink, site, step, pack })
+  if (!panel) return null
+
+  return (
+    <>
+      {panel}
+      <div className="emp-foot" style={{ '--accent': accent, '--accent-ink': ink }}>
+        <SavingsBar eq={save?.eq} />
+        {next && onOpenAgent && (
+          <div className="esteira">
+            <button className="esteira__send" onClick={() => onOpenAgent(next.id)}>
+              Enviar pro {nextLabel} →
+            </button>
+            <span className="esteira__note">Não são 5 chats: é uma esteira. Um alimenta o próximo.</span>
+          </div>
+        )}
+      </div>
+    </>
+  )
 }
