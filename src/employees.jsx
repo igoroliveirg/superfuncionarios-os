@@ -724,24 +724,60 @@ function Analista({ accent, ink, site, step = 0, pack }) {
 // página (preview escuro real). Três artefatos gated por step (A/B/C).
 // Toggle Desktop/Celular funcional. Vidro só no chrome (lp-chrome).
 
-// criativo (story 9:16 / feed 1:1) montado a partir da copy do anúncio
-function CreativeCard({ cls, fmt, d }) {
+// criativo (story 9:16 / feed 1:1): composição em camadas (fundo + glow + grão
+// + copy), com 3 tratamentos visuais reais. Parece anúncio, não wireframe.
+function CreativeCard({ cls, fmt, d, tr }) {
   return (
-    <div className={`creative ${cls}`}>
-      <span className="cr__fmt">{fmt}</span>
-      <div className="cr__b">
-        <span className="cr__brand">{d.brand}</span>
-        <p className="cr__hook">{d.hook}</p>
-        <p className="cr__sub">{d.sub}</p>
-        <span className="cr__cta">{d.cta}</span>
+    <div className={`creative ${cls} tr-${tr}`}>
+      <div className="cr-bg" aria-hidden="true" />
+      <div className="cr-orb" aria-hidden="true" />
+      <div className="cr-grain" aria-hidden="true" />
+      <span className="cr-fmt">{fmt}</span>
+      <div className="cr-inner">
+        <span className="cr-brand">{d.brand}</span>
+        <h4 className="cr-hook">{d.hook}</h4>
+        <p className="cr-sub">{d.sub}</p>
+        <span className="cr-cta">{d.cta} <i aria-hidden="true">→</i></span>
       </div>
-      <span className="cr__line" />
+    </div>
+  )
+}
+
+const TREATMENTS = [
+  { id: 'a', label: 'Gradiente', tone: 'Cor cheia, contraste alto. A versão mais forte.' },
+  { id: 'b', label: 'Duotone', tone: 'Clima de foto, premium e sóbrio.' },
+  { id: 'c', label: 'Dark neon', tone: 'Minimalista, foco total na frase.' },
+]
+
+// artefato Designs: story + feed + troca de tratamento (A/B/C real) + export
+function DesignArtifact({ designs }) {
+  const [tr, setTr] = React.useState('a')
+  const cur = TREATMENTS.find((t) => t.id === tr) || TREATMENTS[0]
+  return (
+    <div className="design-art reveal">
+      <div className="pair">
+        <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY · 9:16'} d={designs} tr={tr} />
+        <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED · 1:1'} d={designs} tr={tr} />
+      </div>
+      <div className="vars-side">
+        <span className="klabel-sm">Tratamentos</span>
+        <div className="vars">
+          {TREATMENTS.map((t) => (
+            <button key={t.id} className={`vt tr-${t.id} ${tr === t.id ? 'sel' : ''}`}
+              onClick={() => setTr(t.id)} aria-pressed={tr === t.id} title={t.label}>
+              <span>{t.label[0]}</span>
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ fontSize: 12.5 }}><b>{cur.label}.</b> {cur.tone}</p>
+        <button className="chip-mini" style={{ marginTop: 10 }}>Exportar PNG · 4 formatos</button>
+      </div>
     </div>
   )
 }
 
 // vídeo: player com legenda palavra a palavra + "como foi montado" + timeline
-function VideoArtifact({ video, accent }) {
+function VideoArtifact({ video, accent, brand }) {
   const [fmt, setFmt] = React.useState('story')
   const words = (video.caption || '').split(/\s+/).filter(Boolean)
   const [hl, setHl] = React.useState(0)
@@ -749,21 +785,26 @@ function VideoArtifact({ video, accent }) {
     if (!words.length) return
     const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (reduce) { setHl(words.length - 1); return }
-    const t = setInterval(() => setHl((h) => (h + 1) % words.length), 360)
+    const t = setInterval(() => setHl((h) => (h + 1) % words.length), 380)
     return () => clearInterval(t)
   }, [words.length])
   const wave = [40, 70, 30, 90, 55, 80, 35, 60, 95, 45, 70, 50, 85, 40, 65, 30, 75, 55, 90, 60, 35, 80]
   return (
     <div className="vwrap reveal">
+      {/* poster estilo Reel: cena com apresentador estilizado + legenda CapCut */}
       <div className={`player ${fmt === 'feed' ? 'feed' : ''}`}>
-        <span className="badge">AVATAR · HeyGen</span>
-        <div className="av"><i>▶</i></div>
+        <div className="pl-scene" aria-hidden="true" />
+        <div className="pl-figure" aria-hidden="true"><span className="pl-head" /><span className="pl-body" /></div>
+        <div className="pl-grain" aria-hidden="true" />
+        <span className="pl-brand">{brand}</span>
+        <span className="badge"><i className="rec" />0:22</span>
         <div className="cap">
           {words.map((w, i) => (
-            <span key={i} className={`w ${i <= hl ? 'on' : ''} ${i === hl ? 'hl' : ''}`}>{w} </span>
+            <span key={i} className={`w ${i <= hl ? 'on' : ''} ${i === hl ? 'hl' : ''}`}>{w}</span>
           ))}
         </div>
-        <div className="play">▶</div>
+        <div className="pl-bar" aria-hidden="true"><i /></div>
+        <button className="play" aria-hidden="true">▶</button>
       </div>
       <div className="vside">
         <span className="klabel-sm">Como foi montado</span>
@@ -839,32 +880,16 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
       {/* A · DESIGNS do anúncio */}
       <section className="sec-block cnv-block">
         <span className="block-tab"><span className="b">A</span> Designs do anúncio</span>
-        {showDesigns ? (
-          <div className="pair reveal">
-            <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY 9:16'} d={designs} />
-            <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED 1:1'} d={designs} />
-            <div className="vars-side">
-              <span className="klabel-sm">Variações</span>
-              <div className="vars">
-                {(designs.variacoes || ['A', 'B', 'C']).map((v, i) => (
-                  <div key={v} className={`vt ${i === 0 ? 'sel' : ''}`}>
-                    <span>{v}</span>
-                    <i style={i ? { background: ['#9b6bff', '#2fd49a'][i - 1] || accent } : undefined} />
-                  </div>
-                ))}
-              </div>
-              <p className="muted" style={{ fontSize: 12.5 }}>Mesma copy, 3 tratamentos. A versão A foi marcada como a mais forte.</p>
-              <button className="chip-mini" style={{ marginTop: 10 }}>Exportar PNG (4 formatos)</button>
-            </div>
-          </div>
-        ) : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1.</div>}
+        {showDesigns
+          ? <DesignArtifact designs={designs} />
+          : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1.</div>}
       </section>
 
       {/* B · VÍDEO gerado e editado */}
       <section className="sec-block cnv-block">
         <span className="block-tab"><span className="b">B</span> Vídeo gerado e editado</span>
         {showVideo
-          ? <VideoArtifact video={video} accent={accent} />
+          ? <VideoArtifact video={video} accent={accent} brand={designs.brand} />
           : <div className="blk-empty">Avatar (HeyGen) + voz (ElevenLabs) + legenda palavra a palavra.</div>}
       </section>
 
@@ -1082,8 +1107,14 @@ function FeedPreview({ accent, ink, caption, tags, type, igUser }) {
           </div>
           <span className="ig-more">⋯</span>
         </div>
-        <div className="ig-media has-img">
-          <img className="ig-post-img" src="/deck/post-spacex.webp" alt="" />
+        <div className="ig-media ig-poster" style={{ '--accent': accent }}>
+          <span className="igp-bg" aria-hidden="true" />
+          <span className="igp-orb" aria-hidden="true" />
+          <span className="igp-glyph" aria-hidden="true">{(igUser || '★').trim().charAt(0).toUpperCase()}</span>
+          <span className="igp-grain" aria-hidden="true" />
+          <span className="igp-scrim" aria-hidden="true" />
+          <p className="igp-hook">{firstLine}</p>
+          <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
         </div>
         <div className="ig-actions">
           <span className="ig-ic">♡</span><span className="ig-ic">💬</span><span className="ig-ic">➦</span>
