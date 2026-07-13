@@ -79,3 +79,16 @@ Duas camadas novas por cima da demo, ambas **aditivas e com queda suave** (sem c
 **Testes:** +12 (image + chat), suíte em 78 no total. `npm run test` verde, `npm run build` limpo.
 
 **Spec/plano:** `docs/superpowers/specs/2026-07-13-chat-ao-vivo-e-imagem-real-design.md` e `docs/superpowers/plans/2026-07-13-chat-ao-vivo-e-imagem-real.md`.
+
+## Ajustes v2 (jul/2026, tarde)
+
+Seis mudanças pedidas pelo Igor, todas verificadas rodando:
+
+1. **Anúncio com texto POR CIMA da imagem** (nunca imagem pura). A foto do `gpt-image-2` vira fundo com scrim; a copy fica sobreposta. Vale nos criativos do Construtor e no balão do chat (a tool `gerar_imagem` agora exige `headline`).
+2. **Construtor virou "Construtor de Anúncios":** removidos o vídeo e a página de venda. Só os criativos. `pack.construtor` mantém os dados antigos (resolve.test usa `hero`); código morto do page-builder (`VideoArtifact` etc.) ficou sem uso, dá pra limpar.
+3. **Abre direto no 1º agente (Pesquisa)**, não no hub. Fechar a janela revela o hub.
+4. **Configurações + criar agente** (engrenagem no chrome): escolhe 1 de 5 fotos pré-definidas (`public/avatars/a1..a5.png`, robôs no estilo da casa), nomeia, descreve o papel. O agente entra no launcher e abre conversável na hora (Claude Sonnet, descrição = system prompt). Só na sessão (sem persistência).
+5. **Conversa vira visual no painel central.** Tool `mostrar_no_painel` (persona / lista / barras / tabela / kpis) em todos os agentes: a IA escolhe o formato e o resultado renderiza na tela central (não só texto no chat). `ChatPanel` passou a receber `mode`/`live` do pai (Window/CustomAgentWindow); `LivePanels` renderiza os specs.
+6. **Tudo ancorado no site** segue como alicerce (imagem, chat, agentes recebem nicho/empresa/oferta/cor).
+
+Testes: 80 no total. Novas fotos em `public/avatars/`. Overrides de palco: `#noimg`, `#hq` (imagem); `#niche`, `#theme`, `#color` (identidade).
