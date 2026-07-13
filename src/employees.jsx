@@ -1098,7 +1098,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
 // Distinto do Copywriter (que faz anúncio). Último do fluxo: encerra.
 
 // Preview do post ORGÂNICO no feed (post de perfil — não anúncio)
-function FeedPreview({ accent, ink, caption, tags, type, igUser }) {
+function FeedPreview({ accent, ink, caption, tags, type, igUser, img }) {
   const [view, setView] = React.useState('mobile')
   const firstLine = caption.split('\n')[0]
   return (
@@ -1123,15 +1123,22 @@ function FeedPreview({ accent, ink, caption, tags, type, igUser }) {
           </div>
           <span className="ig-more">⋯</span>
         </div>
-        <div className="ig-media ig-poster" style={{ '--accent': accent }}>
-          <span className="igp-bg" aria-hidden="true" />
-          <span className="igp-orb" aria-hidden="true" />
-          <span className="igp-glyph" aria-hidden="true">{(igUser || '★').trim().charAt(0).toUpperCase()}</span>
-          <span className="igp-grain" aria-hidden="true" />
-          <span className="igp-scrim" aria-hidden="true" />
-          <p className="igp-hook">{firstLine}</p>
-          <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
-        </div>
+        {img ? (
+          <div className="ig-media ig-real" style={{ '--accent': accent }}>
+            <img src={`data:image/png;base64,${img.b64}`} alt={img.alt || firstLine} />
+            <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
+          </div>
+        ) : (
+          <div className="ig-media ig-poster" style={{ '--accent': accent }}>
+            <span className="igp-bg" aria-hidden="true" />
+            <span className="igp-orb" aria-hidden="true" />
+            <span className="igp-glyph" aria-hidden="true">{(igUser || '★').trim().charAt(0).toUpperCase()}</span>
+            <span className="igp-grain" aria-hidden="true" />
+            <span className="igp-scrim" aria-hidden="true" />
+            <p className="igp-hook">{firstLine}</p>
+            <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
+          </div>
+        )}
         <div className="ig-actions">
           <span className="ig-ic">♡</span><span className="ig-ic">💬</span><span className="ig-ic">➦</span>
           <span className="ig-save">⬚</span>
@@ -1296,13 +1303,18 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
           </div>
         </div>
         <SectionTitle accent={accent}>Como vai aparecer no feed</SectionTitle>
-        <FeedPreview accent={accent} ink={ink} caption={legenda} tags={tags} type={open.tipo} igUser={igUser} />
+        <FeedPreview accent={accent} ink={ink} caption={legenda} tags={tags} type={open.tipo} igUser={igUser} img={open.img} />
         <SectionTitle accent={accent}>Seu feed enchendo no mês</SectionTitle>
         <div className="ig-profile-grid" style={{ '--bb-accent': accent }}>
           <BuildBlock.Grid
             waves={3}
             cadence={620}
-            tiles={Array.from({ length: 9 }, (_, i) => ({ id: i, label: pilares[i % pilares.length].ic }))}
+            tiles={Array.from({ length: 9 }, (_, i) => ({
+              id: i,
+              label: pilares[i % pilares.length].ic,
+              src: posts[i]?.img ? `data:image/png;base64,${posts[i].img.b64}` : null,
+              alt: posts[i]?.txt,
+            }))}
           />
           <p className="grid-hint muted">30 posts na fila · 3 ondas de 3 · clique pra preencher tudo</p>
         </div>

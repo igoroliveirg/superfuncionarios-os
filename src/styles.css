@@ -2631,3 +2631,8 @@ body {
 .creative.is-real .cr-caption .cr-brand { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .04em; }
 .creative.is-real .cr-caption .cr-hook { font-size: 15px; line-height: 1.2; }
 .creative.is-real .cr-caption .cr-cta { font-size: 12.5px; color: var(--accent-ink, #333); }
+
+/* ── Post orgânico com imagem real no feed ── */
+.ig-media.ig-real { position: relative; overflow: hidden; }
+.ig-media.ig-real img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ig-media.ig-real .igp-tag { position: absolute; top: 10px; right: 10px; }
