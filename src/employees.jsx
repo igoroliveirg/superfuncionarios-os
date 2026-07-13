@@ -1,7 +1,6 @@
 import React from 'react'
 import { Section, fmt, BuildBlock } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
-import { safeAccent } from './niches/color.js'
 import { SavingsBar, recordArtifact } from './savings.jsx'
 
 // ── Metadados dos 5 super funcionários ───────────────────────────────
@@ -784,67 +783,6 @@ function DesignArtifact({ designs }) {
         </div>
         <p className="muted" style={{ fontSize: 12.5 }}><b>{cur.label}.</b> {cur.tone}</p>
         <button className="chip-mini" style={{ marginTop: 10 }}>Exportar PNG · 4 formatos</button>
-      </div>
-    </div>
-  )
-}
-
-// vídeo: player com legenda palavra a palavra + "como foi montado" + timeline
-function VideoArtifact({ video, accent, brand }) {
-  const [fmt, setFmt] = React.useState('story')
-  const words = (video.caption || '').split(/\s+/).filter(Boolean)
-  const [hl, setHl] = React.useState(0)
-  React.useEffect(() => {
-    if (!words.length) return
-    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    if (reduce) { setHl(words.length - 1); return }
-    const t = setInterval(() => setHl((h) => (h + 1) % words.length), 380)
-    return () => clearInterval(t)
-  }, [words.length])
-  const wave = [40, 70, 30, 90, 55, 80, 35, 60, 95, 45, 70, 50, 85, 40, 65, 30, 75, 55, 90, 60, 35, 80]
-  return (
-    <div className="vwrap reveal">
-      {/* poster estilo Reel: cena com apresentador estilizado + legenda CapCut */}
-      <div className={`player ${fmt === 'feed' ? 'feed' : ''}`}>
-        <div className="pl-scene" aria-hidden="true" />
-        <div className="pl-figure" aria-hidden="true"><span className="pl-head" /><span className="pl-body" /></div>
-        <div className="pl-grain" aria-hidden="true" />
-        <span className="pl-brand">{brand}</span>
-        <span className="badge"><i className="rec" />0:22</span>
-        <div className="cap">
-          {words.map((w, i) => (
-            <span key={i} className={`w ${i <= hl ? 'on' : ''} ${i === hl ? 'hl' : ''}`}>{w}</span>
-          ))}
-        </div>
-        <div className="pl-bar" aria-hidden="true"><i /></div>
-        <button className="play" aria-hidden="true">▶</button>
-      </div>
-      <div className="vside">
-        <span className="klabel-sm">Como foi montado</span>
-        <div className="mods">
-          {(video.modulos || []).map((m, i) => (
-            <div key={i} className="mod"><span className="d" /><span className="nm">{m.nm}</span><span className="by">{m.by}</span></div>
-          ))}
-        </div>
-        <span className="klabel-sm">Timeline ({video.duracao})</span>
-        <div className="vtl" style={{ margin: '8px 0 12px' }}>
-          <div className="vtl-track">
-            {(video.timeline || []).map((t, i) => (
-              <div key={i} className="vtl-cell" style={{ flex: t.f }}><span>{t.l}</span></div>
-            ))}
-          </div>
-          <div className="wave">{wave.map((v, i) => <i key={i} style={{ height: `${v}%` }} />)}</div>
-        </div>
-        <div className="vfmt">
-          <span className="klabel-sm">Formato</span>
-          <div className="seg">
-            {(video.formatos || ['Story 9:16', 'Feed 1:1']).map((f, i) => {
-              const key = i === 0 ? 'story' : 'feed'
-              return <button key={f} className={fmt === key ? 'on' : ''} onClick={() => setFmt(key)}>{f}</button>
-            })}
-          </div>
-          <button className="chip-mini" style={{ marginLeft: 'auto' }}>Exportar MP4</button>
-        </div>
       </div>
     </div>
   )
