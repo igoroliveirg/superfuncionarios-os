@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSystem, truncate, hasImageTool, IMAGE_TOOL } from '../server/chat.mjs'
+import { buildSystem, truncate, hasImageTool, IMAGE_TOOL, PANEL_TOOL } from '../server/chat.mjs'
 
 const pack = {
   pesquisa: { persona: { contexto: 'Dona de clínica · BH' } },
@@ -52,5 +52,14 @@ describe('IMAGE_TOOL', () => {
     expect(IMAGE_TOOL.name).toBe('gerar_imagem')
     expect(IMAGE_TOOL.input_schema.properties).toHaveProperty('prompt')
     expect(IMAGE_TOOL.input_schema.properties).toHaveProperty('formato')
+  })
+})
+
+describe('PANEL_TOOL', () => {
+  it('mostra no painel central e oferece os formatos visuais', () => {
+    expect(PANEL_TOOL.name).toBe('mostrar_no_painel')
+    expect(PANEL_TOOL.input_schema.properties.tipo.enum).toContain('persona')
+    expect(PANEL_TOOL.input_schema.properties.tipo.enum).toContain('barras')
+    expect(PANEL_TOOL.input_schema.required).toContain('titulo')
   })
 })

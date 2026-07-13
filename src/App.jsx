@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
-import { useAgentChat, ChatPanel, ZoomCtx } from './chat.jsx'
+import { useAgentChat, useLiveChat, ChatPanel, LivePanels, ZoomCtx } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
 import { resolvePack } from './niches/index.js'
@@ -314,7 +314,9 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 
 function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack, siteCtx }) {
   const { ref, flyToDock } = useGenieWindow(origin)
-  const chat = useAgentChat(pack.scripts?.[emp.id] || SCRIPTS[emp.id]) // conversa viva do agente ativo (personalizada via pack)
+  const chat = useAgentChat(pack.scripts?.[emp.id] || SCRIPTS[emp.id]) // demo roteirizada (personalizada via pack)
+  const [mode, setMode] = useState('demo') // demo (roteiro) | live (conversa que alimenta o painel central)
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: chat.messages[0]?.text })
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
   const nextAgent = _i < EMPLOYEES.length - 1 ? EMPLOYEES[_i + 1] : null // último encerra o ciclo
 
@@ -380,9 +382,23 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen,
         </div>
       </div>
       <div className="window-body has-chat" ref={bodyRef}>
-        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} onOpenAgent={onOpen} />
+        {mode === 'live' ? (
+          <div className="emp live-central" style={{ '--accent': emp.color, '--accent-ink': emp.ink }}>
+            <div className="emp-head">
+              <div>
+                <h2>{emp.name}</h2>
+                <p className="muted">Conversa ao vivo · o resultado aparece aqui</p>
+              </div>
+            </div>
+            {live.panels.length
+              ? <LivePanels panels={live.panels} accent={emp.color} ink={emp.ink} />
+              : <div className="live-empty">Pergunte algo aqui do lado. O que der pra mostrar vira persona, lista, gráfico ou tabela nesta tela.</div>}
+          </div>
+        ) : (
+          <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} onOpenAgent={onOpen} />
+        )}
       </div>
-      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} siteCtx={siteCtx} pack={pack} />
+      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} live={live} mode={mode} setMode={setMode} />
     </div>
   )
 }
@@ -804,6 +820,7 @@ function SettingsWindow({ origin, getExitTarget, onClose, onMinimize, onCreate, 
 function CustomAgentWindow({ emp, origin, getExitTarget, onClose, onMinimize, siteCtx, pack }) {
   const { ref, flyToDock } = useGenieWindow(origin)
   const chat = useAgentChat({ greeting: `Oi, sou ${emp.name}. Me diz o que você precisa e eu trabalho pra ${siteCtx?.empresa || 'sua empresa'}.`, turns: [] })
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: chat.messages[0]?.text, desc: emp.desc })
   const handleMinimize = () => flyToDock(getExitTarget?.(), onMinimize)
   const handleClose = () => flyToDock(getExitTarget?.(), onClose)
 
@@ -829,14 +846,18 @@ function CustomAgentWindow({ emp, origin, getExitTarget, onClose, onMinimize, si
               <p className="muted">Agente personalizado a partir de {siteCtx?.empresa || 'sua empresa'}</p>
             </div>
           </div>
-          <div className="custom-brief">
-            <img className="custom-face" src={emp.img} alt="" style={{ boxShadow: `0 8px 30px ${emp.glow}` }} />
-            <p className="custom-desc">{emp.desc || 'Converse comigo pra eu começar a trabalhar.'}</p>
-            <p className="muted custom-hint">Fale comigo aqui do lado. Respondo com base no seu site e no que você me pediu pra ser.</p>
-          </div>
+          {live.panels.length ? (
+            <LivePanels panels={live.panels} accent={emp.color} ink={emp.ink} />
+          ) : (
+            <div className="custom-brief">
+              <img className="custom-face" src={emp.img} alt="" style={{ boxShadow: `0 8px 30px ${emp.glow}` }} />
+              <p className="custom-desc">{emp.desc || 'Converse comigo pra eu começar a trabalhar.'}</p>
+              <p className="muted custom-hint">Fale comigo aqui do lado. Respondo com base no seu site e no que você me pediu pra ser.</p>
+            </div>
+          )}
         </div>
       </div>
-      <ChatPanel emp={emp} chat={chat} siteCtx={siteCtx} pack={pack} liveOnly />
+      <ChatPanel emp={emp} chat={chat} live={live} mode="live" setMode={() => {}} liveOnly />
     </div>
   )
 }

@@ -409,6 +409,7 @@ export function useAgentChat(script) {
 // ════════════════════════════════════════════════════════════════════
 export function useLiveChat({ empId, siteCtx, pack, greeting, desc = '' }) {
   const [messages, setMessages] = useState(() => [{ id: 0, role: 'agent', text: greeting || 'Oi. Como posso ajudar?', streaming: false }])
+  const [panels, setPanels] = useState([]) // artefatos visuais que a IA mandou pro painel central
   const [busy, setBusy] = useState(false)
   const seq = useRef(1)
   const histRef = useRef([]) // [{ role:'user'|'assistant', content:string }]
@@ -428,6 +429,7 @@ export function useLiveChat({ empId, siteCtx, pack, greeting, desc = '' }) {
       histRef.current = [...histRef.current, { role: 'user', content: t }, { role: 'assistant', content: reply }].slice(-12)
       setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: reply, streaming: true }])
       ;(res.images || []).forEach((img) => setMessages((m) => [...m, { id: seq.current++, role: 'image', img }]))
+      ;(res.panels || []).forEach((spec) => setPanels((p) => [...p, { id: seq.current++, spec }]))
     } catch {
       setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: 'Não consegui responder agora. Tenta de novo?', streaming: false }])
     } finally {
@@ -435,7 +437,7 @@ export function useLiveChat({ empId, siteCtx, pack, greeting, desc = '' }) {
     }
   }, [empId, siteCtx, pack, busy, desc])
 
-  return { messages, busy, send }
+  return { messages, panels, busy, send }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -546,7 +548,9 @@ function ProduceLog({ id }) {
 // ════════════════════════════════════════════════════════════════════
 //  ChatPanel · painel de vidro flutuante à direita
 // ════════════════════════════════════════════════════════════════════
-export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack, liveOnly = false }) {
+// `mode`/`setMode` e `live` (useLiveChat) vêm do pai (Window), pra que o painel
+// CENTRAL também reaja à conversa (os visuais que a IA manda pra tela).
+export function ChatPanel({ emp, chat, nextAgent, onNext, live, mode, setMode, liveOnly = false }) {
   const { messages, thinking, chips, pickChip, streamingId, onStreamDone, pendingConnectId, onConnected } = chat
   const zoom = useContext(ZoomCtx)
   const scrollRef = useRef(null)
@@ -554,12 +558,7 @@ export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack, liveOnl
   const inputRef = useRef(null)
   const prevStream = useRef(null)
   const [announce, setAnnounce] = useState('') // região sr-only que anuncia a resposta pronta
-  const [mode, setMode] = useState(liveOnly ? 'live' : 'demo') // 'demo' (roteirizado) | 'live' (conversa)
   const [draft, setDraft] = useState('')
-
-  // motor da conversa ao vivo (instanciado sempre; só exibido em 'live').
-  // desc = papel do agente personalizado (undefined nos 5 funcionários fixos)
-  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: messages[0]?.text, desc: emp.desc })
 
   // qual conjunto está na tela agora
   const isLive = liveOnly || mode === 'live'
@@ -701,5 +700,77 @@ export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack, liveOnl
 
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
     </aside>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  LivePanels · renderiza os visuais que a IA mandou pro painel central
+//  (tipo escolhido pela IA: persona / lista / barras / tabela / kpis)
+// ════════════════════════════════════════════════════════════════════
+export function LivePanels({ panels = [], accent, ink }) {
+  if (!panels.length) return null
+  return (
+    <div className="live-panels">
+      {panels.map((p) => <LivePanel key={p.id} spec={p.spec} accent={accent} ink={ink} />)}
+    </div>
+  )
+}
+
+function LivePanel({ spec, accent, ink }) {
+  const { tipo, titulo } = spec || {}
+  const pct = (n) => Math.max(0, Math.min(100, Number(n) || 0))
+  return (
+    <section className="lp-card reveal" style={{ '--accent': accent, '--accent-ink': ink }}>
+      {titulo && <h3 className="lp-card-title">{titulo}</h3>}
+
+      {tipo === 'kpis' && (
+        <div className="lp-kpis">
+          {(spec.kpis || []).map((k, i) => (
+            <div key={i} className="lp-kpi"><b style={{ color: ink }}>{k.valor}</b><span>{k.label}</span></div>
+          ))}
+        </div>
+      )}
+
+      {tipo === 'lista' && (
+        <ul className="lp-list">
+          {(spec.itens || []).map((t, i) => <li key={i}><span className="lp-dot" style={{ background: accent }} aria-hidden="true" />{t}</li>)}
+        </ul>
+      )}
+
+      {tipo === 'barras' && (
+        <div className="lp-bars2">
+          {(spec.barras || []).map((b, i) => (
+            <div key={i} className="lp-bar2">
+              <div className="lp-bar2-top"><span>{b.label}</span>{b.valor != null && <b style={{ color: ink }}>{b.valor}</b>}</div>
+              <div className="lp-bar2-track"><span className="lp-bar2-fill" style={{ width: `${pct(b.pct)}%`, background: accent }} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tipo === 'tabela' && (
+        <div className="lp-table-wrap">
+          <table className="lp-table">
+            {spec.colunas && <thead><tr>{spec.colunas.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>}
+            <tbody>{(spec.linhas || []).map((row, i) => <tr key={i}>{(row || []).map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      )}
+
+      {tipo === 'persona' && spec.persona && (
+        <div className="lp-persona">
+          <div className="lp-persona-head">
+            <span className="lp-persona-av" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}66)` }}>{(spec.persona.nome || '?').charAt(0)}</span>
+            <div className="lp-persona-id"><b>{spec.persona.nome}</b><span className="muted">{spec.persona.contexto}</span></div>
+          </div>
+          {spec.persona.traits?.length > 0 && (
+            <div className="lp-tags">{spec.persona.traits.map((t, i) => <span key={i} className="lp-tag" style={{ borderColor: accent, color: ink }}>{t}</span>)}</div>
+          )}
+          {spec.persona.dores?.length > 0 && (
+            <ul className="lp-list">{spec.persona.dores.map((d, i) => <li key={i}><span className="lp-dot" style={{ background: accent }} aria-hidden="true" />{d}</li>)}</ul>
+          )}
+        </div>
+      )}
+    </section>
   )
 }
