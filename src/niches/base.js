@@ -340,32 +340,11 @@ export const BASE_PACK = {
     },
     construtor: {
       greeting:
-        'Eu construo o que precisa subir: criativos (design e vídeo) e páginas. Peguei a copy do Copywriter, já com a oferta e a sua voz. O que monto primeiro?',
+        'Eu monto os anúncios que vão pro ar: o criativo em imagem, no formato certo, com a copy do Copywriter e a cara da sua marca. Peguei a oferta e a sua voz do seu site. Qual anúncio monto primeiro?',
       turns: [
-        { chip: 'Montar os designs do anúncio', reply: 'Apliquei a copy do anúncio campeão em dois formatos, story 9:16 e feed 1:1, com três tratamentos pra testar. Mesma mensagem, três caras. Olha à direita.' },
-        { chip: 'Gerar o vídeo com avatar e voz', reply: 'Montei um vídeo de 22 segundos: avatar apresentador, voz sintética natural e legenda palavra a palavra, já cortado pra story e feed. Sem gravar nada, sem estúdio.' },
-        { chip: 'Montar a página', reply: 'Fechei a estrutura e o hero, puxando a promessa do seu site: headline que para o scroll, subtítulo e o botão de candidatura. A página já ganha cara de verdade à direita.' },
-        { chip: 'Puxar a prova social', reply: 'Coloquei os números que sustentam a oferta e depoimentos de quem aplicou. Prova é o que tira o "será que funciona pra mim?" da cabeça do lead antes dele ver o preço.' },
-        { chip: 'Montar a oferta', reply: 'Oferta fechada: o que ele leva, a contagem regressiva com data e lugar, e a garantia logo abaixo. É aqui que a decisão acontece, então o risco fica do nosso lado.' },
-        { chip: 'Ver no celular', reply: 'Mesma página, layout de celular. 7 em cada 10 leads chegam pelo Instagram, então a versão mobile é a que mais vende. Toca pra alternar entre desktop e celular.' },
-        {
-          chip: 'Publicar agora',
-          connect: {
-            prompt: 'Pra publicar de verdade, preciso ligar duas coisas no seu funil:',
-            items: [
-              { id: 'dominio', label: 'domínio / hospedagem', mono: '🌐', color: '#3a3c46' },
-              {
-                id: 'crm', label: 'CRM (pros leads do formulário)', options: [
-                  { id: 'rd', label: 'RD Station', mono: 'RD', color: '#19b9c9' },
-                  { id: 'hub', label: 'HubSpot', mono: 'H', color: '#ff7a59' },
-                  { id: 'pipe', label: 'Pipedrive', mono: 'P', color: '#1a7a3c' },
-                  { id: 'sheets', label: 'Google Sheets', mono: 'GS', color: '#0f9d58' },
-                ],
-              },
-            ],
-          },
-          reply: 'Página no ar, domínio ligado, pixel e formulário plugados no seu funil. Levou uma conversa, não seis semanas de agência.',
-        },
+        { chip: 'Montar os designs do anúncio', reply: 'Apliquei a copy do anúncio campeão em dois formatos, story 9:16 e feed 1:1, com o texto por cima da imagem da sua marca. Mesma mensagem, duas caras. Olha à direita.' },
+        { chip: 'Testar outro tratamento visual', reply: 'Gerei variações de tratamento pra você testar qual converte: cor cheia, clima de foto e minimalista. Mesma frase, três climas. Toca pra alternar.' },
+        { chip: 'Exportar os 4 formatos', reply: 'Exportei o anúncio nos formatos que as plataformas pedem, story, feed e a versão quadrada. Pronto pra subir no Meta hoje. Levou uma conversa, não uma semana de designer.' },
       ],
     },
     conteudo: {

@@ -29,7 +29,7 @@ export const EMPLOYEES = [
   {
     id: 'construtor',
     name: 'O Construtor',
-    role: 'Criativos (design e vídeo) e página no ar',
+    role: 'Construtor de anúncios: criativos prontos pra subir',
     code: 'AG.CONSTRUTOR',
     img: '/agentes/construtor.png',
     color: '#ff8a3c', ink: '#a8500e', glow: 'rgba(255,138,60,.55)',
@@ -851,240 +851,28 @@ function VideoArtifact({ video, accent, brand }) {
 }
 
 function Construtor({ accent, ink, site, step = 0, pack }) {
-  const [device, setDevice] = React.useState('desktop')
-  // ao chegar no passo "ver no celular", troca pro mobile sozinho (1×) —
-  // no deck ninguém clica no toggle, então sem isso "nada muda"
-  const switchedRef = React.useRef(false)
-  React.useEffect(() => {
-    if (step > 5 && !switchedRef.current) { switchedRef.current = true; setDevice('mobile') }
-  }, [step])
-
-  const { designs, video, blocos, ticker, depoimentos, countdown, hero, includes, offer } = pack.construtor
-
-  // identidade visual da landing = cor da marca do cliente (validada p/ tema
-  // escuro); se não houver cor utilizável, cai no accent do nicho; senão laranja.
-  const light = pack.construtor.theme === 'light' // landing clara segue o site do cliente
-  const themed = safeAccent(pack.construtor.brandColor) || safeAccent(pack.accentDefault)
-  const la = themed ? themed.accent : accent // acento da landing p/ usos inline
-  // no tema claro o realce de texto usa a variante mais escura (contraste no branco)
-  const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': light ? themed.accent2 : themed.grad } : undefined
-
-  const showDesigns = step > 0  // A · designs do anúncio
-  const showVideo = step > 1    // B · vídeo gerado
-  const showBlocos = step > 2   // C · estrutura da página
-  const showHero = step > 2
-  const showProva = step > 3
-  const showOferta = step > 4
-  const showMobile = step > 5   // turn "ver no celular" libera o toggle
-  const showPublicado = step > 6
-
-  const dev = showMobile ? device : 'desktop'
+  // Construtor de Anúncios: só os criativos (imagem com texto por cima).
+  // Vídeo e página de venda foram removidos (foco em anúncio).
+  const { designs } = pack.construtor
+  const showDesigns = step > 0
 
   return (
     <div className="emp build" style={{ '--accent': accent, '--accent-ink': ink }}>
       <div className="emp-head">
         <div>
-          <h2>O Construtor</h2>
-          <p className="muted">Criativos e página a partir de {site}</p>
+          <h2>Construtor de Anúncios</h2>
+          <p className="muted">Criativos do anúncio a partir de {site}</p>
         </div>
-        <Pill ink={ink}>{showPublicado ? 'No ar' : 'Montando…'}</Pill>
+        <Pill ink={ink}>{showDesigns ? 'Pronto' : 'Montando…'}</Pill>
       </div>
 
-      {/* A · DESIGNS do anúncio */}
+      {/* Designs do anúncio (imagem real + texto por cima) */}
       <section className="sec-block cnv-block">
         <span className="block-tab"><span className="b">A</span> Designs do anúncio</span>
         {showDesigns
           ? <DesignArtifact designs={designs} />
-          : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1.</div>}
+          : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1, com o texto por cima da imagem.</div>}
       </section>
-
-      {/* B · VÍDEO gerado e editado */}
-      <section className="sec-block cnv-block">
-        <span className="block-tab"><span className="b">B</span> Vídeo gerado e editado</span>
-        {showVideo
-          ? <VideoArtifact video={video} accent={accent} brand={designs.brand} />
-          : <div className="blk-empty">Avatar (HeyGen) + voz (ElevenLabs) + legenda palavra a palavra.</div>}
-      </section>
-
-      {/* C · PÁGINA publicada */}
-      <span className="block-tab"><span className="b">C</span> Página publicada</span>
-      <div className="builder">
-        {/* ── lista de blocos à esquerda ── */}
-        <div className="blk-list">
-          <div className="blk-head">Blocos da página</div>
-          {showBlocos ? (
-            <>
-              {blocos.map((b, i) => (
-                <div
-                  key={i}
-                  className="blk reveal"
-                  style={{ '--ri': i, ...(i === 4 ? { borderColor: accent, color: ink } : null) }}
-                >
-                  <span className="blk-grip" aria-hidden="true">⋮⋮</span>
-                  <span className="blk-body">
-                    <span className="blk-name">{b.n}</span>
-                    <span className="blk-desc">{b.d}</span>
-                  </span>
-                  <span className="blk-ok" style={{ color: accent }}>✓</span>
-                </div>
-              ))}
-              <button className="add-blk" style={{ borderColor: accent, color: ink }}>+ Adicionar bloco</button>
-            </>
-          ) : (
-            <div className="blk-empty">A estrutura aparece aqui.</div>
-          )}
-        </div>
-
-        {/* ── preview da landing à direita ── */}
-        <div className="preview-wrap">
-          {showMobile && (
-            <div className="dev-toggle reveal" role="group" aria-label="Visualizar em">
-              <button
-                className={`dev-btn ${dev === 'desktop' ? 'on' : ''}`}
-                style={dev === 'desktop' ? { background: ink, borderColor: ink } : null}
-                onClick={() => setDevice('desktop')}
-                aria-pressed={dev === 'desktop'}
-              >▭ Desktop</button>
-              <button
-                className={`dev-btn ${dev === 'mobile' ? 'on' : ''}`}
-                style={dev === 'mobile' ? { background: ink, borderColor: ink } : null}
-                onClick={() => setDevice('mobile')}
-                aria-pressed={dev === 'mobile'}
-              >▯ Celular</button>
-            </div>
-          )}
-
-          <div className={`lp dev-${dev} ${light ? 'is-light' : ''}`} style={lpVars}>
-            {/* chrome do navegador = único vidro */}
-            <div className="lp-chrome">
-              <span /><span /><span />
-              <span className="lp-url">
-                <span className="lp-lock" aria-hidden="true">🔒</span>
-                {showPublicado ? site : 'rascunho · não publicado'}
-              </span>
-            </div>
-
-            {/* viewport escuro = a landing real */}
-            <div className="lp-view">
-              <div className="lp-glow" aria-hidden="true" />
-
-              {/* HERO */}
-              {showHero ? (
-                <header className="lp-hero reveal">
-                  <span className="lp-badge">
-                    {hero.badge.map((b, i) => i
-                      ? <React.Fragment key={i}><i>·</i>{b}</React.Fragment>
-                      : <React.Fragment key={i}>{b}</React.Fragment>)}
-                  </span>
-                  <p className="lp-pre">{hero.pre}</p>
-                  {hero.showAvatars && (
-                    <div className="lp-avatars" aria-hidden="true">
-                      {['pesquisa', 'copywriter', 'metricas', 'construtor', 'conteudo'].map((a, i) => (
-                        <img key={a} src={`/agentes/${a}.png`} alt="" style={{ '--ai': i }} />
-                      ))}
-                    </div>
-                  )}
-                  <h1 className="lp-h1">
-                    {showHero && step === 3
-                      ? <BuildBlock.Line as="span" className="lp-h1-line">{hero.h1Typed}</BuildBlock.Line>
-                      : <>{hero.h1Pre}<span className="lp-grad">{hero.h1Grad}</span>{hero.h1Post}</>}
-                  </h1>
-                  <p className="lp-sub">{hero.sub}</p>
-                  <div className="lp-cta-row">
-                    <button className="lp-cta">{hero.cta} <span aria-hidden="true">→</span></button>
-                    <span className="lp-cta-note">{hero.ctaNote}</span>
-                  </div>
-                </header>
-              ) : (
-                <div className="lp-skeleton" aria-hidden="true">
-                  <span className="sk sk-badge" /><span className="sk sk-h1" />
-                  <span className="sk sk-h1 short" /><span className="sk sk-sub" /><span className="sk sk-cta" />
-                </div>
-              )}
-
-              {/* PROVA: ticker + depoimentos */}
-              {showProva && (
-                <section className="lp-proof reveal">
-                  <div className="lp-ticker">
-                    {ticker.map((t, i) => (
-                      <div key={i} className="lp-tk" style={{ '--ri': i }}>
-                        <b>{t.v}</b><span>{t.l}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="lp-quotes">
-                    {depoimentos.map((d, i) => (
-                      <figure key={i} className="lp-quote reveal" style={{ '--ri': i }}>
-                        <span className="lp-q-mark" aria-hidden="true">“</span>
-                        <blockquote>{d.txt}</blockquote>
-                        <figcaption>
-                          <span className="lp-q-av" style={{ background: `linear-gradient(135deg, ${la}, ${themed ? themed.accent2 : '#ff3b30'})` }}>
-                            {d.nome[0]}
-                          </span>
-                          <span className="lp-q-id">
-                            <b>{d.nome}</b><span>{d.cargo}</span>
-                          </span>
-                          <span className="lp-q-check" aria-hidden="true">✔</span>
-                        </figcaption>
-                      </figure>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* OFERTA: o que entra + countdown + garantia */}
-              {showOferta && (
-                <section className="lp-offer reveal">
-                  <span className="lp-eyebrow">{offer.eyebrow}</span>
-                  <h2 className="lp-offer-h">{offer.hPre}<span className="lp-grad">{offer.hGrad}</span>{offer.hPost}</h2>
-                  <ul className="lp-includes">
-                    {includes.map((t, i) => (
-                      <li key={i} style={{ '--ri': i }}><span className="lp-ck" style={{ color: la }}>✓</span>{t}</li>
-                    ))}
-                  </ul>
-
-                  <div className="lp-countdown">
-                    <div className="lp-cd-top">
-                      <span className="lp-cd-lab">{offer.cdLab}</span>
-                      <span className="lp-cd-when">{offer.cdWhen}</span>
-                    </div>
-                    <div className="lp-cd-units">
-                      {countdown.map((c, i) => (
-                        <div key={i} className="lp-cd-u"><b>{c.v}</b><span>{c.l}</span></div>
-                      ))}
-                    </div>
-                    <p className="lp-cd-foot">{offer.cdFoot}</p>
-                  </div>
-
-                  <div className="lp-guarantee">
-                    <span className="lp-shield" aria-hidden="true">🛡</span>
-                    <div>
-                      <b>{offer.guaranteeTitle}</b>
-                      <span>{offer.guaranteeText}</span>
-                    </div>
-                  </div>
-                </section>
-              )}
-            </div>
-          </div>
-
-          {/* barra de publicação */}
-          {showPublicado && (
-            <div className="publish-bar reveal" style={{ borderColor: la }}>
-              <span className="pub-dot" style={{ background: la, boxShadow: `0 0 10px ${la}` }} />
-              <div className="pub-text">
-                <b style={{ color: ink }}>Publicado · no ar em 24h</b>
-                <span className="pub-checks">
-                  <i>✓ domínio</i><i>✓ pixel</i><i>✓ formulário no funil</i><i>✓ SSL</i>
-                </span>
-              </div>
-              <a className="pub-link" style={{ borderColor: la, color: la }} href={`https://${site}`} onClick={(e) => e.preventDefault()}>
-                Abrir página →
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

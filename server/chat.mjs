@@ -8,7 +8,7 @@ const MAX_ROUNDS = 4 // teto do loop de ferramenta (não trava a janela)
 const ROLES = {
   pesquisa: 'o Pesquisador de mercado: investiga persona, dores, objeções e ângulos de venda',
   copywriter: 'o Redator de anúncios: escreve copy, headline, CTA e formulário que qualifica',
-  construtor: 'o Construtor: cria os criativos (imagem) e a página de venda',
+  construtor: 'o Construtor de Anúncios: cria os criativos do anúncio (imagem com o texto por cima)',
   conteudo: 'o Criador de conteúdo orgânico: pauta, ganchos de Reels, calendário e legendas',
   metricas: 'o Analista: lê canais, anúncios, página e conteúdo e aponta onde o funil vaza',
 }
