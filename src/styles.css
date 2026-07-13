@@ -2636,3 +2636,33 @@ body {
 .ig-media.ig-real { position: relative; overflow: hidden; }
 .ig-media.ig-real img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ig-media.ig-real .igp-tag { position: absolute; top: 10px; right: 10px; }
+
+/* ── Configurações: criar agente ───────────────────────────────────── */
+.chrome-gear { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(0,0,0,.10); background: rgba(255,255,255,.7); color: #5a6072; cursor: pointer; }
+.chrome-gear:hover { background: #fff; color: #2a2e3a; }
+.cg-ic { width: 18px; height: 18px; }
+.settings { padding: 22px 26px; max-width: 640px; }
+.set-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.set-label { font-size: 12px; font-weight: 700; color: #6b7180; text-transform: uppercase; letter-spacing: .06em; margin-top: 10px; }
+.avatar-pick { display: flex; gap: 12px; flex-wrap: wrap; }
+.av-opt { padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; width: 62px; height: 62px; box-shadow: 0 0 0 2px rgba(0,0,0,.08); transition: box-shadow .15s, transform .15s; }
+.av-opt img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.av-opt:hover { transform: translateY(-2px); }
+.av-opt.sel { box-shadow: 0 0 0 3px var(--ring), 0 6px 18px rgba(0,0,0,.18); }
+.set-input, .set-textarea { border: 1px solid rgba(0,0,0,.14); border-radius: 10px; padding: 10px 12px; font: inherit; outline: none; resize: vertical; }
+.set-input:focus, .set-textarea:focus { border-color: #7c8195; }
+.set-create { margin-top: 14px; align-self: flex-start; border: 0; border-radius: 11px; padding: 11px 20px; font: inherit; font-weight: 800; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+.set-create:disabled { opacity: .45; cursor: default; box-shadow: none; }
+.set-hint { font-size: 12px; margin-top: 6px; }
+.set-list { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+.set-agent { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid rgba(0,0,0,.08); border-left: 3px solid var(--accent); border-radius: 10px; }
+.set-agent img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.set-agent-main { display: flex; flex-direction: column; }
+.set-agent-main .muted { font-size: 12.5px; }
+
+/* ── Janela do agente personalizado ── */
+.custom-emp { padding: 22px 26px; }
+.custom-brief { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; margin-top: 30px; }
+.custom-face { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; }
+.custom-desc { font-size: 17px; font-weight: 700; line-height: 1.3; max-width: 460px; color: #2a2e3a; }
+.custom-hint { max-width: 380px; font-size: 13px; }

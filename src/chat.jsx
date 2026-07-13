@@ -407,7 +407,7 @@ export function useAgentChat(script) {
 //  Manda o texto pro /api/chat (Claude Sonnet) e recebe { text, images }.
 //  Papel 'image' = balão com a imagem gerada. Histórico no formato Anthropic.
 // ════════════════════════════════════════════════════════════════════
-export function useLiveChat({ empId, siteCtx, pack, greeting }) {
+export function useLiveChat({ empId, siteCtx, pack, greeting, desc = '' }) {
   const [messages, setMessages] = useState(() => [{ id: 0, role: 'agent', text: greeting || 'Oi. Como posso ajudar?', streaming: false }])
   const [busy, setBusy] = useState(false)
   const seq = useRef(1)
@@ -422,7 +422,7 @@ export function useLiveChat({ empId, siteCtx, pack, greeting }) {
     try {
       const res = await fetch('/api/chat', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ empId, history: histRef.current, userText: t, vars: siteCtx, pack }),
+        body: JSON.stringify({ empId, history: histRef.current, userText: t, vars: siteCtx, pack, desc }),
       }).then((r) => r.json())
       const reply = res.text || 'Feito.'
       histRef.current = [...histRef.current, { role: 'user', content: t }, { role: 'assistant', content: reply }].slice(-12)
@@ -433,7 +433,7 @@ export function useLiveChat({ empId, siteCtx, pack, greeting }) {
     } finally {
       setBusy(false)
     }
-  }, [empId, siteCtx, pack, busy])
+  }, [empId, siteCtx, pack, busy, desc])
 
   return { messages, busy, send }
 }
@@ -546,7 +546,7 @@ function ProduceLog({ id }) {
 // ════════════════════════════════════════════════════════════════════
 //  ChatPanel · painel de vidro flutuante à direita
 // ════════════════════════════════════════════════════════════════════
-export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack }) {
+export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack, liveOnly = false }) {
   const { messages, thinking, chips, pickChip, streamingId, onStreamDone, pendingConnectId, onConnected } = chat
   const zoom = useContext(ZoomCtx)
   const scrollRef = useRef(null)
@@ -554,14 +554,15 @@ export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack }) {
   const inputRef = useRef(null)
   const prevStream = useRef(null)
   const [announce, setAnnounce] = useState('') // região sr-only que anuncia a resposta pronta
-  const [mode, setMode] = useState('demo')      // 'demo' (roteirizado) | 'live' (conversa)
+  const [mode, setMode] = useState(liveOnly ? 'live' : 'demo') // 'demo' (roteirizado) | 'live' (conversa)
   const [draft, setDraft] = useState('')
 
-  // motor da conversa ao vivo (instanciado sempre; só exibido em 'live')
-  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: messages[0]?.text })
+  // motor da conversa ao vivo (instanciado sempre; só exibido em 'live').
+  // desc = papel do agente personalizado (undefined nos 5 funcionários fixos)
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: messages[0]?.text, desc: emp.desc })
 
   // qual conjunto está na tela agora
-  const isLive = mode === 'live'
+  const isLive = liveOnly || mode === 'live'
   const viewMessages = isLive ? live.messages : messages
   const viewStreamingId = isLive ? null : streamingId
   const viewOnStreamDone = isLive ? undefined : onStreamDone
@@ -621,10 +622,12 @@ export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack }) {
             {viewThinking ? 'pensando…' : viewStreamingId ? 'digitando…' : viewPendingConnectId ? 'aguardando conexão…' : 'online'}
           </span>
         </div>
-        <div className="chat-mode" role="tablist" aria-label="Modo do chat">
-          <button role="tab" type="button" aria-selected={!isLive} className={`cm-tab ${!isLive ? 'on' : ''}`} onClick={() => setMode('demo')}>Demo</button>
-          <button role="tab" type="button" aria-selected={isLive} className={`cm-tab ${isLive ? 'on' : ''}`} onClick={() => setMode('live')}>Conversa</button>
-        </div>
+        {!liveOnly && (
+          <div className="chat-mode" role="tablist" aria-label="Modo do chat">
+            <button role="tab" type="button" aria-selected={!isLive} className={`cm-tab ${!isLive ? 'on' : ''}`} onClick={() => setMode('demo')}>Demo</button>
+            <button role="tab" type="button" aria-selected={isLive} className={`cm-tab ${isLive ? 'on' : ''}`} onClick={() => setMode('live')}>Conversa</button>
+          </div>
+        )}
       </header>
 
       <div className="chat-log" ref={scrollRef} role="log" aria-label="Conversa">

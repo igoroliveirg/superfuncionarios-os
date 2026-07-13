@@ -36,8 +36,10 @@ export function truncate(history, n = 12) {
   return history.length <= n ? history : history.slice(history.length - n)
 }
 
-export function buildSystem(empId, vars, pack) {
-  const quem = ROLES[empId] || 'um funcionário de IA do time de marketing'
+export function buildSystem(empId, vars, pack, desc = '') {
+  // agente personalizado (criado nas Configurações): o papel vem da descrição do dono
+  const quem = ROLES[empId]
+    || (desc ? `um funcionário de IA personalizado. Sua função, definida pelo dono da empresa: ${desc}` : 'um funcionário de IA do time de marketing')
   const persona = pack?.pesquisa?.persona?.contexto ? ` O cliente ideal: ${pack.pesquisa.persona.contexto}.` : ''
   return [
     `Você é ${quem}, trabalhando para ${vars.empresa} (segmento: ${vars.niche}).`,
@@ -50,10 +52,10 @@ export function buildSystem(empId, vars, pack) {
 
 // Executa o turno: loop até o Claude parar de chamar ferramenta.
 // Retorna { text, images:[{b64,format,alt}] }.
-export async function chatTurn({ empId, history = [], userText, vars = {}, pack = {} }) {
+export async function chatTurn({ empId, history = [], userText, vars = {}, pack = {}, desc = '' }) {
   if (!process.env.ANTHROPIC_API_KEY) return { text: 'Configure a chave da Anthropic pra conversar ao vivo.', images: [] }
   const client = new Anthropic()
-  const system = buildSystem(empId, vars, pack)
+  const system = buildSystem(empId, vars, pack, desc)
   const tools = hasImageTool(empId) ? [IMAGE_TOOL] : []
   const messages = [...truncate(history), { role: 'user', content: userText }]
   const images = []

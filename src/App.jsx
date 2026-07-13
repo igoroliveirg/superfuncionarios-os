@@ -564,11 +564,11 @@ function RoutinesWindow({ origin, getExitTarget, onClose, onMinimize }) {
 
 // Launcher radial: um círculo central (robô ativo, ou marca) e os OUTROS
 // robôs florescem em volta. Janela única.
-const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
+const Launcher = React.forwardRef(function Launcher({ activeId, onOpen, customAgents = [] }, ref) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
-  const ALL = [...EMPLOYEES, ROTINAS]
+  const ALL = [...EMPLOYEES, ...customAgents, ROTINAS]
   const anchor = ALL.find((e) => e.id === activeId) || null
   const sats = ALL.filter((e) => e.id !== activeId)
   const N = sats.length
@@ -682,7 +682,166 @@ function HubDashboard({ onOpen, site }) {
   )
 }
 
-function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
+// ════════════════════════════════════════════════════════════════════
+//  CONFIGURAÇÕES · criar agente personalizado (conversável, só na sessão)
+// ════════════════════════════════════════════════════════════════════
+
+// pool de fotos pré-definidas (robôs no estilo da casa). A cor do agente
+// segue a foto escolhida.
+const AVATAR_POOL = [
+  { img: '/avatars/a1.png', color: '#ff5a5f', ink: '#c1272d', glow: 'rgba(255,90,95,.5)' },
+  { img: '/avatars/a2.png', color: '#ffb020', ink: '#9a6600', glow: 'rgba(255,176,32,.5)' },
+  { img: '/avatars/a3.png', color: '#1fd1c6', ink: '#0a7f77', glow: 'rgba(31,209,198,.5)' },
+  { img: '/avatars/a4.png', color: '#7c6cff', ink: '#4a3fd0', glow: 'rgba(124,108,255,.5)' },
+  { img: '/avatars/a5.png', color: '#4aa3ff', ink: '#0d6fc4', glow: 'rgba(74,163,255,.5)' },
+]
+
+let _customSeq = 0
+export function makeCustomAgent({ name, desc, avatar }) {
+  return {
+    id: `custom-${_customSeq++}`, custom: true,
+    name: name || 'Novo agente', desc: desc || '',
+    role: 'Agente personalizado', code: 'AG.PERSONALIZADO',
+    img: avatar.img, color: avatar.color, ink: avatar.ink, glow: avatar.glow,
+  }
+}
+
+const SETTINGS = { id: 'settings', name: 'Configurações', color: '#7c8195', glow: 'rgba(90,96,120,.5)' }
+
+function GearIcon({ className = 'sat-ic' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Janela de Configurações: cria um novo agente (foto + nome + descrição).
+function SettingsWindow({ origin, getExitTarget, onClose, onMinimize, onCreate, customAgents }) {
+  const { ref, flyToDock } = useGenieWindow(origin)
+  const [picked, setPicked] = useState(0)
+  const [name, setName] = useState('')
+  const [desc, setDesc] = useState('')
+
+  const create = () => {
+    onCreate({ name: name.trim(), desc: desc.trim(), avatar: AVATAR_POOL[picked] })
+    setName(''); setDesc('')
+  }
+  const handleMinimize = () => flyToDock(getExitTarget?.(), onMinimize)
+  const handleClose = () => flyToDock(getExitTarget?.(), onClose)
+
+  return (
+    <div ref={ref} tabIndex={-1} role="dialog" aria-label="Configurações" className="window" style={{ '--win-glow': SETTINGS.glow }}>
+      <div className="titlebar" style={{ borderTopColor: SETTINGS.color }}>
+        <div className="traffic">
+          <button className="tl close" onClick={handleClose} aria-label="Fechar" />
+          <button className="tl min" onClick={handleMinimize} aria-label="Voltar ao launcher" />
+        </div>
+        <div className="title">
+          <span className="title-av title-av-ic" style={{ boxShadow: `0 0 0 2px ${SETTINGS.color}` }}><GearIcon className="rot-head-ic" /></span>
+          <span>Configurações</span>
+          <span className="title-code" style={{ color: '#454a5a' }}>AGENTES</span>
+        </div>
+        <div className="title-model"><span className="dot" style={{ background: SETTINGS.color }} /> criar novo agente</div>
+      </div>
+      <div className="window-body">
+        <div className="settings">
+          <div className="emp-head">
+            <div>
+              <h2>Criar um novo agente</h2>
+              <p className="muted">Escolha uma foto, dê um nome e descreva o que ele faz. Ele entra no launcher e você conversa com ele na hora.</p>
+            </div>
+          </div>
+
+          <div className="set-form">
+            <label className="set-label">Foto</label>
+            <div className="avatar-pick" role="radiogroup" aria-label="Foto do agente">
+              {AVATAR_POOL.map((a, i) => (
+                <button key={i} type="button" role="radio" aria-checked={picked === i}
+                  className={`av-opt ${picked === i ? 'sel' : ''}`} style={{ '--ring': a.color }}
+                  onClick={() => setPicked(i)}>
+                  <img src={a.img} alt="" />
+                </button>
+              ))}
+            </div>
+
+            <label className="set-label" htmlFor="ag-name">Nome</label>
+            <input id="ag-name" className="set-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: A Atendente" maxLength={28} />
+
+            <label className="set-label" htmlFor="ag-desc">O que ele faz</label>
+            <textarea id="ag-desc" className="set-textarea" value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
+              placeholder="Descreva o papel dele. Ex: responde dúvidas de clientes no WhatsApp, qualifica o lead e agenda a reunião." />
+
+            <button className="set-create" style={{ background: AVATAR_POOL[picked].color, color: '#15101e' }}
+              onClick={create} disabled={!desc.trim()}>
+              Criar agente
+            </button>
+            {!desc.trim() && <span className="set-hint muted">Descreva o que ele faz pra liberar.</span>}
+          </div>
+
+          {customAgents.length > 0 && (
+            <div className="set-list">
+              <span className="klabel-sm">Agentes criados nesta sessão</span>
+              {customAgents.map((a) => (
+                <div key={a.id} className="set-agent" style={{ '--accent': a.color }}>
+                  <img src={a.img} alt="" style={{ boxShadow: `0 0 0 2px ${a.color}` }} />
+                  <div className="set-agent-main">
+                    <b>{a.name}</b>
+                    <span className="muted">{a.desc || 'sem descrição'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Janela de um agente personalizado: central genérica + chat ao vivo (liveOnly).
+function CustomAgentWindow({ emp, origin, getExitTarget, onClose, onMinimize, siteCtx, pack }) {
+  const { ref, flyToDock } = useGenieWindow(origin)
+  const chat = useAgentChat({ greeting: `Oi, sou ${emp.name}. Me diz o que você precisa e eu trabalho pra ${siteCtx?.empresa || 'sua empresa'}.`, turns: [] })
+  const handleMinimize = () => flyToDock(getExitTarget?.(), onMinimize)
+  const handleClose = () => flyToDock(getExitTarget?.(), onClose)
+
+  return (
+    <div ref={ref} tabIndex={-1} role="dialog" aria-label={emp.name} className="window" style={{ '--win-glow': emp.glow }}>
+      <div className="titlebar" style={{ borderTopColor: emp.color }}>
+        <div className="traffic">
+          <button className="tl close" onClick={handleClose} aria-label="Fechar" />
+          <button className="tl min" onClick={handleMinimize} aria-label="Voltar ao launcher" />
+        </div>
+        <div className="title">
+          <img src={emp.img} alt="" className="title-av" style={{ boxShadow: `0 0 0 2px ${emp.color}` }} />
+          <span>{emp.name}</span>
+          <span className="title-code" style={{ color: emp.ink }}>{emp.code}</span>
+        </div>
+        <div className="title-model"><span className="dot" style={{ background: emp.color }} /> rodando na sua IA</div>
+      </div>
+      <div className="window-body has-chat">
+        <div className="emp custom-emp" style={{ '--accent': emp.color, '--accent-ink': emp.ink }}>
+          <div className="emp-head">
+            <div>
+              <h2>{emp.name}</h2>
+              <p className="muted">Agente personalizado a partir de {siteCtx?.empresa || 'sua empresa'}</p>
+            </div>
+          </div>
+          <div className="custom-brief">
+            <img className="custom-face" src={emp.img} alt="" style={{ boxShadow: `0 8px 30px ${emp.glow}` }} />
+            <p className="custom-desc">{emp.desc || 'Converse comigo pra eu começar a trabalhar.'}</p>
+            <p className="muted custom-hint">Fale comigo aqui do lado. Respondo com base no seu site e no que você me pediu pra ser.</p>
+          </div>
+        </div>
+      </div>
+      <ChatPanel emp={emp} chat={chat} siteCtx={siteCtx} pack={pack} liveOnly />
+    </div>
+  )
+}
+
+function Desktop({ site, onPresent, pack, siteCtx, customAgents, onCreateAgent, zoomMode, onToggleZoom }) {
   // abre direto no 1º agente (Pesquisa); fechar a janela revela o hub radial
   const [activeId, setActiveId] = useState(EMPLOYEES[0].id)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
@@ -709,12 +868,20 @@ function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [activeId])
 
-  const emp = EMPLOYEES.find((e) => e.id === activeId) || null
+  const roster = [...EMPLOYEES, ...customAgents]
+  const emp = roster.find((e) => e.id === activeId) || null
   const isRotinas = activeId === 'rotinas'
+  const isSettings = activeId === 'settings'
+
+  // cria o agente e já abre a janela dele
+  const createAndOpen = (spec) => { const ag = onCreateAgent?.(spec); if (ag) open(ag.id) }
 
   return (
     <div className="desktop">
       <div className="desk-chrome">
+        <button className="chrome-gear" onClick={() => open('settings')} title="Configurações (criar agente)" aria-label="Configurações">
+          <GearIcon className="cg-ic" />
+        </button>
         {onToggleZoom && (
           <button
             className={`demo-toggle${zoomMode ? ' is-on' : ''}`}
@@ -734,7 +901,18 @@ function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
       </div>
       <div className="wallpaper">
         {!activeId && <HubDashboard onOpen={open} site={site} />}
-        {emp && (
+        {emp && (emp.custom ? (
+          <CustomAgentWindow
+            key={emp.id}
+            emp={emp}
+            origin={origin}
+            getExitTarget={centerRectOf}
+            onClose={close}
+            onMinimize={close}
+            siteCtx={siteCtx}
+            pack={pack}
+          />
+        ) : (
           <Window
             key={emp.id}
             emp={emp}
@@ -747,7 +925,7 @@ function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
             pack={pack}
             siteCtx={siteCtx}
           />
-        )}
+        ))}
         {isRotinas && (
           <RoutinesWindow
             key="rotinas"
@@ -757,8 +935,19 @@ function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
             onMinimize={close}
           />
         )}
+        {isSettings && (
+          <SettingsWindow
+            key="settings"
+            origin={origin}
+            getExitTarget={centerRectOf}
+            onClose={close}
+            onMinimize={close}
+            onCreate={createAndOpen}
+            customAgents={customAgents}
+          />
+        )}
       </div>
-      <Launcher ref={launcherRef} activeId={activeId} onOpen={open} />
+      <Launcher ref={launcherRef} activeId={activeId} onOpen={open} customAgents={customAgents} />
     </div>
   )
 }
@@ -785,8 +974,15 @@ function Shell() {
   const [vars, setVars] = useState({})
   const [gen, setGen] = useState(null) // conteúdo gerado pela IA a partir do site real
   const [images, setImages] = useState({}) // imagens reais geradas (gpt-image-2): { cFeed, cStory, post0 }
+  const [customAgents, setCustomAgents] = useState([]) // agentes criados nas Configurações (só na sessão)
   const identifyRef = useRef(null)
   const generateRef = useRef(null)
+
+  const createAgent = useCallback((spec) => {
+    const ag = makeCustomAgent(spec)
+    setCustomAgents((list) => [...list, ag])
+    return ag
+  }, [])
   // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio),
   // e por cima o conteúdo personalizado do site (gen). Sem gen → molde do nicho.
   const pack = useMemo(() => {
@@ -965,6 +1161,8 @@ function Shell() {
           onPresent={startPresent}
           pack={pack}
           siteCtx={siteCtx}
+          customAgents={customAgents}
+          onCreateAgent={createAgent}
           zoomMode={zoomMode}
           onToggleZoom={() => setZoomMode((v) => !v)}
         />

@@ -17,6 +17,11 @@ describe('buildSystem', () => {
     expect(s.toLowerCase()).toContain('nunca')
     expect(s.toLowerCase()).toContain('super funcionários')
   })
+  it('agente personalizado usa a descrição do dono como papel', () => {
+    const s = buildSystem('custom-abc', { empresa: 'ACME', oferta: 'x', niche: 'generico' }, pack, 'cuida do suporte ao cliente no WhatsApp')
+    expect(s).toContain('suporte ao cliente no WhatsApp')
+    expect(s).toContain('ACME')
+  })
 })
 
 describe('hasImageTool', () => {
