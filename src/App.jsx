@@ -312,7 +312,7 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 //  DESKTOP
 // ════════════════════════════════════════════════════════════════════
 
-function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack }) {
+function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack, siteCtx }) {
   const { ref, flyToDock } = useGenieWindow(origin)
   const chat = useAgentChat(pack.scripts?.[emp.id] || SCRIPTS[emp.id]) // conversa viva do agente ativo (personalizada via pack)
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
@@ -382,7 +382,7 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen,
       <div className="window-body has-chat" ref={bodyRef}>
         <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} onOpenAgent={onOpen} />
       </div>
-      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} />
+      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} siteCtx={siteCtx} pack={pack} />
     </div>
   )
 }
@@ -682,7 +682,7 @@ function HubDashboard({ onOpen, site }) {
   )
 }
 
-function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
+function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
   const [activeId, setActiveId] = useState(null) // idle → hub radial; abre 1 janela por vez
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
@@ -744,6 +744,7 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
             onMinimize={close}
             onOpen={open}
             pack={pack}
+            siteCtx={siteCtx}
           />
         )}
         {isRotinas && (
@@ -795,6 +796,14 @@ function Shell() {
     })
     return gen ? mergePack(base, gen) : base
   }, [niche, vars, gen])
+
+  // contexto do site pro chat ao vivo (empresa/oferta/nicho/cor da marca)
+  const siteCtx = useMemo(() => ({
+    empresa: vars.empresa || 'sua empresa',
+    oferta: vars.oferta || 'sua oferta',
+    niche,
+    primaryColor: vars.primaryColor || '',
+  }), [vars, niche])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -923,6 +932,7 @@ function Shell() {
           site={site}
           onPresent={startPresent}
           pack={pack}
+          siteCtx={siteCtx}
           zoomMode={zoomMode}
           onToggleZoom={() => setZoomMode((v) => !v)}
         />

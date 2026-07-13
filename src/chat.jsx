@@ -403,6 +403,42 @@ export function useAgentChat(script) {
 }
 
 // ════════════════════════════════════════════════════════════════════
+//  MOTOR DA CONVERSA AO VIVO · useLiveChat
+//  Manda o texto pro /api/chat (Claude Sonnet) e recebe { text, images }.
+//  Papel 'image' = balão com a imagem gerada. Histórico no formato Anthropic.
+// ════════════════════════════════════════════════════════════════════
+export function useLiveChat({ empId, siteCtx, pack, greeting }) {
+  const [messages, setMessages] = useState(() => [{ id: 0, role: 'agent', text: greeting || 'Oi. Como posso ajudar?', streaming: false }])
+  const [busy, setBusy] = useState(false)
+  const seq = useRef(1)
+  const histRef = useRef([]) // [{ role:'user'|'assistant', content:string }]
+
+  const send = useCallback(async (text) => {
+    const t = (text || '').trim()
+    if (!t || busy) return
+    const uid = seq.current++
+    setMessages((m) => [...m, { id: uid, role: 'user', text: t }])
+    setBusy(true)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ empId, history: histRef.current, userText: t, vars: siteCtx, pack }),
+      }).then((r) => r.json())
+      const reply = res.text || 'Feito.'
+      histRef.current = [...histRef.current, { role: 'user', content: t }, { role: 'assistant', content: reply }].slice(-12)
+      setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: reply, streaming: true }])
+      ;(res.images || []).forEach((img) => setMessages((m) => [...m, { id: seq.current++, role: 'image', img }]))
+    } catch {
+      setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: 'Não consegui responder agora. Tenta de novo?', streaming: false }])
+    } finally {
+      setBusy(false)
+    }
+  }, [empId, siteCtx, pack, busy])
+
+  return { messages, busy, send }
+}
+
+// ════════════════════════════════════════════════════════════════════
 //  ConnectCard · card de integração inline (estilo OAuth) dentro do chat
 //  contrato connect: { prompt, items:[ {id,label,mono,color}
 //                       | {id,label,options:[{id,label,mono,color}]} ] }
@@ -510,25 +546,37 @@ function ProduceLog({ id }) {
 // ════════════════════════════════════════════════════════════════════
 //  ChatPanel · painel de vidro flutuante à direita
 // ════════════════════════════════════════════════════════════════════
-export function ChatPanel({ emp, chat, nextAgent, onNext }) {
+export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack }) {
   const { messages, thinking, chips, pickChip, streamingId, onStreamDone, pendingConnectId, onConnected } = chat
   const zoom = useContext(ZoomCtx)
   const scrollRef = useRef(null)
   const chipRef = useRef(null)
+  const inputRef = useRef(null)
   const prevStream = useRef(null)
   const [announce, setAnnounce] = useState('') // região sr-only que anuncia a resposta pronta
+  const [mode, setMode] = useState('demo')      // 'demo' (roteirizado) | 'live' (conversa)
+  const [draft, setDraft] = useState('')
 
-  // pula pro fim quando entra msg/thinking
+  // motor da conversa ao vivo (instanciado sempre; só exibido em 'live')
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: messages[0]?.text })
+
+  // qual conjunto está na tela agora
+  const isLive = mode === 'live'
+  const viewMessages = isLive ? live.messages : messages
+  const viewStreamingId = isLive ? null : streamingId
+  const viewOnStreamDone = isLive ? undefined : onStreamDone
+  const viewPendingConnectId = isLive ? null : pendingConnectId
+  const viewThinking = isLive ? live.busy : thinking
+
+  // pula pro fim quando entra msg/atividade
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages.length, thinking, streamingId])
+  }, [viewMessages.length, viewThinking, viewStreamingId])
 
-  // acompanha o texto crescendo durante o streaming (sem isso, o caret some da dobra).
-  // Em Modo demo o texto sai inteiro (sem char-a-char), então o loop de rAF só
-  // competiria com o vsync do encoder nos holds: o scrollTo único acima já basta.
+  // acompanha o texto crescendo durante o streaming do demo (caret na dobra)
   useEffect(() => {
-    if (!streamingId || prefersReduced() || zoom) return
+    if (isLive || !streamingId || prefersReduced() || zoom) return
     let raf = 0
     const loop = () => {
       const el = scrollRef.current
@@ -537,17 +585,26 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [streamingId, zoom])
+  }, [streamingId, zoom, isLive])
 
-  // ao terminar uma resposta: foca o próximo chip (teclado) + anuncia a resposta (leitor)
+  // ao terminar uma resposta do demo: foca o próximo chip + anuncia (leitor)
   useEffect(() => {
     if (prevStream.current && !streamingId) {
       const lastAgent = [...messages].reverse().find((m) => m.role === 'agent')
       if (lastAgent) setAnnounce(lastAgent.text)
-      requestAnimationFrame(() => chipRef.current?.focus())
+      if (!isLive) requestAnimationFrame(() => chipRef.current?.focus())
     }
     prevStream.current = streamingId
   }, [streamingId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = (e) => {
+    e.preventDefault()
+    const t = draft.trim()
+    if (!t) return
+    setDraft('')
+    live.send(t)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
 
   return (
     <aside
@@ -561,56 +618,80 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
           <strong>{emp.name}</strong>
           <span className="chat-status" aria-live="polite">
             <i className="chat-dot" style={{ background: emp.color }} aria-hidden="true" />
-            {thinking ? 'pensando…' : streamingId ? 'digitando…' : pendingConnectId ? 'aguardando conexão…' : 'online'}
+            {viewThinking ? 'pensando…' : viewStreamingId ? 'digitando…' : viewPendingConnectId ? 'aguardando conexão…' : 'online'}
           </span>
+        </div>
+        <div className="chat-mode" role="tablist" aria-label="Modo do chat">
+          <button role="tab" type="button" aria-selected={!isLive} className={`cm-tab ${!isLive ? 'on' : ''}`} onClick={() => setMode('demo')}>Demo</button>
+          <button role="tab" type="button" aria-selected={isLive} className={`cm-tab ${isLive ? 'on' : ''}`} onClick={() => setMode('live')}>Conversa</button>
         </div>
       </header>
 
       <div className="chat-log" ref={scrollRef} role="log" aria-label="Conversa">
-        {messages.map((m) => (
-          m.role === 'connect'
-            ? <ConnectCard key={m.id} connect={m.connect} active={m.id === pendingConnectId} onConnected={onConnected} />
-            : (
-              <div key={m.id} className={`bubble ${m.role} reveal`}>
-                {m.role === 'agent' && m.streaming
-                  ? <Typewriter text={m.text} className="bubble-tx" onDone={m.id === streamingId ? onStreamDone : undefined} />
-                  : <span className="bubble-tx">{m.text}</span>}
-              </div>
-            )
-        ))}
-        {thinking && (
+        {viewMessages.map((m) => {
+          if (m.role === 'connect') return <ConnectCard key={m.id} connect={m.connect} active={m.id === viewPendingConnectId} onConnected={onConnected} />
+          if (m.role === 'image') return (
+            <figure key={m.id} className="bubble agent img-bubble reveal">
+              <img src={`data:image/png;base64,${m.img.b64}`} alt={m.img.alt || 'Imagem gerada'} />
+              <figcaption>gerado agora · {m.img.format}</figcaption>
+            </figure>
+          )
+          return (
+            <div key={m.id} className={`bubble ${m.role} reveal`}>
+              {m.role === 'agent' && m.streaming
+                ? <Typewriter text={m.text} className="bubble-tx" onDone={m.id === viewStreamingId ? viewOnStreamDone : undefined} />
+                : <span className="bubble-tx">{m.text}</span>}
+            </div>
+          )
+        })}
+        {viewThinking && (
           <div className="bubble agent thinking reveal" aria-hidden="true">
             <span className="dots"><i /><i /><i /></span>
-            <ProduceLog id={emp.id} />
+            {isLive ? <span className="produce-log">▸ pensando…</span> : <ProduceLog id={emp.id} />}
           </div>
         )}
       </div>
 
-      <div className="chat-chips">
-        {chips.length === 0 && !thinking && !streamingId && !pendingConnectId && (
-          <>
-            <p className="chat-end" role="status">
-              {nextAgent ? 'Demonstração concluída.' : 'Fim do fluxo, seus 5 funcionários trabalharam de ponta a ponta.'}
-            </p>
-            {nextAgent && onNext && (
-              <button
-                ref={chipRef}
-                className="chip chip-next"
-                style={{ '--accent': nextAgent.color, '--accent-ink': nextAgent.ink }}
-                onClick={onNext}
-              >
-                <img src={nextAgent.img} alt="" className="chip-next-av" />
-                Falar com {nextAgent.name} →
-              </button>
-            )}
-          </>
-        )}
-        {chips.map((c, i) => (
-          <button key={c.id} ref={i === 0 ? chipRef : undefined} className="chip" onClick={pickChip} disabled={thinking || !!streamingId}>
-            {c.label}
-          </button>
-        ))}
-      </div>
+      {isLive ? (
+        <form className="chat-input" onSubmit={submit}>
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={`Fale com ${emp.name}…`}
+            disabled={live.busy}
+            aria-label={`Mensagem para ${emp.name}`}
+            spellCheck={false}
+          />
+          <button type="submit" disabled={live.busy || !draft.trim()} aria-label="Enviar">↑</button>
+        </form>
+      ) : (
+        <div className="chat-chips">
+          {chips.length === 0 && !thinking && !streamingId && !pendingConnectId && (
+            <>
+              <p className="chat-end" role="status">
+                {nextAgent ? 'Demonstração concluída.' : 'Fim do fluxo, seus 5 funcionários trabalharam de ponta a ponta.'}
+              </p>
+              {nextAgent && onNext && (
+                <button
+                  ref={chipRef}
+                  className="chip chip-next"
+                  style={{ '--accent': nextAgent.color, '--accent-ink': nextAgent.ink }}
+                  onClick={onNext}
+                >
+                  <img src={nextAgent.img} alt="" className="chip-next-av" />
+                  Falar com {nextAgent.name} →
+                </button>
+              )}
+            </>
+          )}
+          {chips.map((c, i) => (
+            <button key={c.id} ref={i === 0 ? chipRef : undefined} className="chip" onClick={pickChip} disabled={thinking || !!streamingId}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
     </aside>
