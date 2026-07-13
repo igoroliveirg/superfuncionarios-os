@@ -726,7 +726,23 @@ function Analista({ accent, ink, site, step = 0, pack }) {
 
 // criativo (story 9:16 / feed 1:1): composição em camadas (fundo + glow + grão
 // + copy), com 3 tratamentos visuais reais. Parece anúncio, não wireframe.
-function CreativeCard({ cls, fmt, d, tr }) {
+function CreativeCard({ cls, fmt, d, tr, fmtKey }) {
+  const img = d.images?.[fmtKey]
+  // imagem real (gpt-image-2): visual PURO, sem texto nos pixels; a copy vira legenda abaixo
+  if (img) {
+    return (
+      <figure className={`creative is-real ${cls}`}>
+        <img className="cr-real" src={`data:image/png;base64,${img.b64}`} alt={img.alt || `${d.brand}: ${d.hook}`} />
+        <span className="cr-fmt">{fmt}</span>
+        <figcaption className="cr-caption">
+          <span className="cr-brand">{d.brand}</span>
+          <strong className="cr-hook">{d.hook}</strong>
+          <span className="cr-cta">{d.cta} <i aria-hidden="true">→</i></span>
+        </figcaption>
+      </figure>
+    )
+  }
+  // fallback: composição CSS (sem chave / #noimg / antes de gerar)
   return (
     <div className={`creative ${cls} tr-${tr}`}>
       <div className="cr-bg" aria-hidden="true" />
@@ -756,8 +772,8 @@ function DesignArtifact({ designs }) {
   return (
     <div className="design-art reveal">
       <div className="pair">
-        <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY · 9:16'} d={designs} tr={tr} />
-        <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED · 1:1'} d={designs} tr={tr} />
+        <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY · 9:16'} d={designs} tr={tr} fmtKey="story" />
+        <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED · 1:1'} d={designs} tr={tr} fmtKey="feed" />
       </div>
       <div className="vars-side">
         <span className="klabel-sm">Tratamentos</span>
