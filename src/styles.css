@@ -2620,17 +2620,17 @@ body {
 .chat-input button { flex: 0 0 auto; width: 36px; border: 0; border-radius: 10px; background: var(--accent, #333); color: #fff; font-size: 16px; cursor: pointer; }
 .chat-input button:disabled { opacity: .4; cursor: default; }
 .img-bubble { padding: 4px; max-width: 88%; }
-.img-bubble img { display: block; width: 100%; border-radius: 10px; }
+.ib-frame { position: relative; border-radius: 10px; overflow: hidden; isolation: isolate; }
+.ib-frame img { display: block; width: 100%; }
+.ib-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(8,6,16,.78) 0%, rgba(8,6,16,.10) 46%, transparent 70%); }
+.ib-headline { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 1; color: #fff; font-weight: 900; font-size: 17px; line-height: 1.05; letter-spacing: -.02em; text-shadow: 0 2px 18px rgba(0,0,0,.5); text-wrap: balance; }
 .img-bubble figcaption { font-size: 11px; color: #8a90a0; margin-top: 4px; }
 
 /* ── Criativo com imagem real (gpt-image-2): imagem pura + copy em legenda ── */
-.creative.is-real { display: flex; flex-direction: column; background: none; padding: 0; border: 0; box-shadow: none; }
-.creative.is-real .cr-real { width: 100%; border-radius: 12px; display: block; aspect-ratio: auto; }
-.creative.is-real .cr-fmt { position: absolute; top: 8px; left: 8px; }
-.creative.is-real .cr-caption { display: flex; flex-direction: column; gap: 3px; padding: 8px 2px 0; }
-.creative.is-real .cr-caption .cr-brand { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .04em; }
-.creative.is-real .cr-caption .cr-hook { font-size: 15px; line-height: 1.2; }
-.creative.is-real .cr-caption .cr-cta { font-size: 12.5px; color: var(--accent-ink, #333); }
+/* imagem real vira FUNDO do anúncio; a copy continua sobreposta (cr-inner z-2).
+   scrim escuro embaixo garante a legibilidade do texto sobre a foto. */
+.creative.is-real .cr-real { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; }
+.creative.is-real .cr-scrim { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgba(8,6,16,.82) 0%, rgba(8,6,16,.40) 42%, rgba(8,6,16,.06) 72%, rgba(8,6,16,.14) 100%); }
 
 /* ── Post orgânico com imagem real no feed ── */
 .ig-media.ig-real { position: relative; overflow: hidden; }

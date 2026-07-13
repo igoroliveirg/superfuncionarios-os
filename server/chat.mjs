@@ -24,10 +24,11 @@ export const IMAGE_TOOL = {
   input_schema: {
     type: 'object',
     properties: {
-      prompt: { type: 'string', description: 'Descrição visual concreta do criativo, no negócio do cliente' },
+      prompt: { type: 'string', description: 'Descrição visual concreta do criativo (o FUNDO), no negócio do cliente. Sem texto na cena.' },
+      headline: { type: 'string', description: 'A chamada curta do anúncio, que vai SOBRE a imagem (3 a 8 palavras). O anúncio nunca é imagem pura.' },
       formato: { type: 'string', enum: ['story', 'feed', 'post'], description: 'story 9:16, feed/post 1:1' },
     },
-    required: ['prompt', 'formato'],
+    required: ['prompt', 'headline', 'formato'],
   },
 }
 
@@ -71,7 +72,7 @@ export async function chatTurn({ empId, history = [], userText, vars = {}, pack 
       if (tu.name === 'gerar_imagem') {
         img = await generateImage({
           niche: vars.niche, empresa: vars.empresa, oferta: vars.oferta, brandColor: vars.primaryColor,
-          hook: tu.input.prompt, format: tu.input.formato,
+          hook: tu.input.prompt, headline: tu.input.headline, format: tu.input.formato,
         })
         if (img) images.push(img)
       }

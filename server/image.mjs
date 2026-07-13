@@ -28,7 +28,7 @@ export function buildImagePrompt({ niche, empresa, oferta, brandColor, hook, for
 let _count = 0
 const CAP = Number(process.env.SFOS_IMAGE_CAP || 40)
 
-export async function generateImage({ niche, empresa, oferta, brandColor, hook, format = 'feed', quality = 'medium', refImages = null }) {
+export async function generateImage({ niche, empresa, oferta, brandColor, hook, headline = '', format = 'feed', quality = 'medium', refImages = null }) {
   if (!process.env.OPENAI_API_KEY) return null
   if (_count >= CAP) { console.warn(`[image] cap de ${CAP} imagens atingido; pulando`); return null }
   const prompt = buildImagePrompt({ niche, empresa, oferta, brandColor, hook, format })
@@ -41,7 +41,8 @@ export async function generateImage({ niche, empresa, oferta, brandColor, hook, 
       : await client.images.generate({ model: MODEL, prompt, size, quality, n: 1 })
     const b64 = res?.data?.[0]?.b64_json
     if (!b64) return null
-    return { b64, format, alt: `Criativo de ${empresa}: ${oferta}` }
+    // headline vai junto: o anúncio NUNCA é imagem pura, o cliente sobrepõe o texto
+    return { b64, format, alt: `Criativo de ${empresa}: ${oferta}`, headline: headline || hook || '' }
   } catch (e) {
     console.warn('[image] falhou:', e?.message || e)
     return null

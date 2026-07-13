@@ -728,25 +728,22 @@ function Analista({ accent, ink, site, step = 0, pack }) {
 // + copy), com 3 tratamentos visuais reais. Parece anúncio, não wireframe.
 function CreativeCard({ cls, fmt, d, tr, fmtKey }) {
   const img = d.images?.[fmtKey]
-  // imagem real (gpt-image-2): visual PURO, sem texto nos pixels; a copy vira legenda abaixo
-  if (img) {
-    return (
-      <figure className={`creative is-real ${cls}`}>
-        <img className="cr-real" src={`data:image/png;base64,${img.b64}`} alt={img.alt || `${d.brand}: ${d.hook}`} />
-        <span className="cr-fmt">{fmt}</span>
-        <figcaption className="cr-caption">
-          <span className="cr-brand">{d.brand}</span>
-          <strong className="cr-hook">{d.hook}</strong>
-          <span className="cr-cta">{d.cta} <i aria-hidden="true">→</i></span>
-        </figcaption>
-      </figure>
-    )
-  }
-  // fallback: composição CSS (sem chave / #noimg / antes de gerar)
+  // Anúncio SEMPRE com texto por cima. Com imagem real (gpt-image-2) ela vira
+  // fundo (+ scrim pra legibilidade) e a copy fica sobreposta; sem imagem, cai
+  // na composição CSS. Nunca é imagem pura.
   return (
-    <div className={`creative ${cls} tr-${tr}`}>
-      <div className="cr-bg" aria-hidden="true" />
-      <div className="cr-orb" aria-hidden="true" />
+    <div className={`creative ${cls} ${img ? 'is-real' : `tr-${tr}`}`}>
+      {img ? (
+        <>
+          <img className="cr-real" src={`data:image/png;base64,${img.b64}`} alt={img.alt || `${d.brand}: ${d.hook}`} />
+          <div className="cr-scrim" aria-hidden="true" />
+        </>
+      ) : (
+        <>
+          <div className="cr-bg" aria-hidden="true" />
+          <div className="cr-orb" aria-hidden="true" />
+        </>
+      )}
       <div className="cr-grain" aria-hidden="true" />
       <span className="cr-fmt">{fmt}</span>
       <div className="cr-inner">

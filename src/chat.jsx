@@ -632,7 +632,10 @@ export function ChatPanel({ emp, chat, nextAgent, onNext, siteCtx, pack }) {
           if (m.role === 'connect') return <ConnectCard key={m.id} connect={m.connect} active={m.id === viewPendingConnectId} onConnected={onConnected} />
           if (m.role === 'image') return (
             <figure key={m.id} className="bubble agent img-bubble reveal">
-              <img src={`data:image/png;base64,${m.img.b64}`} alt={m.img.alt || 'Imagem gerada'} />
+              <div className="ib-frame">
+                <img src={`data:image/png;base64,${m.img.b64}`} alt={m.img.alt || 'Imagem gerada'} />
+                {m.img.headline && <span className="ib-headline">{m.img.headline}</span>}
+              </div>
               <figcaption>gerado agora · {m.img.format}</figcaption>
             </figure>
           )
