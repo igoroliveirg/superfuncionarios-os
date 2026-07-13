@@ -783,6 +783,7 @@ function Shell() {
   const [niche, setNiche] = useState('generico')
   const [vars, setVars] = useState({})
   const [gen, setGen] = useState(null) // conteúdo gerado pela IA a partir do site real
+  const [images, setImages] = useState({}) // imagens reais geradas (gpt-image-2): { cFeed, cStory, post0 }
   const identifyRef = useRef(null)
   const generateRef = useRef(null)
   // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio),
@@ -794,8 +795,16 @@ function Shell() {
       primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
       theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
     })
-    return gen ? mergePack(base, gen) : base
-  }, [niche, vars, gen])
+    let p = gen ? mergePack(base, gen) : base
+    // sobrepõe as imagens geradas sem tocar nos arrays (deepMerge substituiria os posts)
+    if (images.cFeed || images.cStory) {
+      p = { ...p, construtor: { ...p.construtor, designs: { ...p.construtor.designs, images: { ...(p.construtor.designs?.images), feed: images.cFeed, story: images.cStory } } } }
+    }
+    if (images.post0 && p.conteudo?.posts?.[0]) {
+      p = { ...p, conteudo: { ...p.conteudo, posts: p.conteudo.posts.map((post, i) => (i === 0 ? { ...post, img: images.post0 } : post)) } }
+    }
+    return p
+  }, [niche, vars, gen, images])
 
   // contexto do site pro chat ao vivo (empresa/oferta/nicho/cor da marca)
   const siteCtx = useMemo(() => ({
@@ -847,6 +856,7 @@ function Shell() {
   // baixo da animação que já existe. Override de palco: #niche=<id> pula a chamada.
   const startAnalyze = useCallback((url) => {
     resetSavings() // cada análise/demo começa o contador do zero e ele sobe a cada agente
+    setImages({})  // limpa imagens da análise anterior
     setSite(url)
     setPhase('analyze')
     const m = typeof window !== 'undefined' && window.location.hash.match(/niche=([a-z]+)/i)
@@ -863,6 +873,18 @@ function Shell() {
     generateRef.current = skipGen ? Promise.resolve(null) : fetch('/api/generate', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
     }).then((r) => r.json()).catch(() => null)
+  }, [])
+
+  // gera 1 imagem via /api/image. Respeita #noimg (desliga) e #hq (quality high).
+  // Retorna o objeto {b64,format,alt} ou null; a UI cai no criativo CSS quando null.
+  const genImage = useCallback((args) => {
+    const h = typeof window !== 'undefined' ? window.location.hash : ''
+    if (/noimg/i.test(h)) return Promise.resolve(null)
+    const quality = /\bhq\b/i.test(h) ? 'high' : 'medium'
+    return fetch('/api/image', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...args, quality }),
+    }).then((r) => r.json()).then((img) => (img && img.b64 ? img : null)).catch(() => null)
   }, [])
 
   // ao fim da animação: aguarda identificação + geração (timeout 30s → molde) e entra.
@@ -887,7 +909,16 @@ function Shell() {
     const primaryColor = cm ? `#${cm[1]}` : out.primaryColor
     setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor, theme })
     goDesktop()
-  }, [])
+
+    // pré-gera as imagens reais (herói) em paralelo; cada uma entra quando chega,
+    // sem bloquear a entrada no desktop. #noimg pula tudo (tratado no genImage).
+    const ctx = { niche: out.niche || 'generico', empresa: out.empresa, oferta: out.oferta, brandColor: primaryColor }
+    const cHook = genOut?.construtor?.designs?.hook || ''
+    const pHook = genOut?.conteudo?.posts?.[0]?.txt || genOut?.conteudo?.legenda || ''
+    genImage({ ...ctx, hook: cHook, format: 'feed' }).then((img) => { if (img) setImages((s) => ({ ...s, cFeed: img })) })
+    genImage({ ...ctx, hook: cHook, format: 'story' }).then((img) => { if (img) setImages((s) => ({ ...s, cStory: img })) })
+    genImage({ ...ctx, hook: pHook, format: 'post' }).then((img) => { if (img) setImages((s) => ({ ...s, post0: img })) })
+  }, [genImage])
 
   // durante a saída do boot, já montamos o onboarding por baixo (push-in sem corte)
   const showOnboarding = ONBOARDING.includes(phase) || (phase === 'boot' && bootLeaving)
