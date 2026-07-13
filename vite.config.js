@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY || ''
   process.env.JINA_API_KEY = process.env.JINA_API_KEY || env.JINA_API_KEY || ''
+  process.env.OPENAI_API_KEY = process.env.OPENAI_API_KEY || env.OPENAI_API_KEY || ''
 
   return {
     plugins: [react(), apiMiddleware()],
