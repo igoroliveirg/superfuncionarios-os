@@ -2638,9 +2638,12 @@ body {
 .ig-media.ig-real .igp-tag { position: absolute; top: 10px; right: 10px; }
 
 /* ── Configurações: criar agente ───────────────────────────────────── */
-.chrome-gear { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; border: 1px solid rgba(0,0,0,.10); background: rgba(255,255,255,.7); color: #5a6072; cursor: pointer; }
-.chrome-gear:hover { background: #fff; color: #2a2e3a; }
-.cg-ic { width: 18px; height: 18px; }
+/* botão explícito de criar agente na barra (CTA escuro, destaca dos neutros) */
+.chrome-newagent { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 15px 0 12px; border-radius: 999px; border: 0; background: #16121f; color: #fff; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(0,0,0,.5); }
+.chrome-newagent:hover { background: #241c33; transform: translateY(-1px); }
+.na-plus { width: 16px; height: 16px; }
+/* nó "+" no dock: bolha escura com o ícone de mais, junto dos funcionários */
+.sat-create .sat-bub { background: linear-gradient(160deg, #3a3e4a, #23262f); display: grid; place-items: center; }
 .settings { padding: 22px 26px; max-width: 640px; }
 .set-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .set-label { font-size: 12px; font-weight: 700; color: #6b7180; text-transform: uppercase; letter-spacing: .06em; margin-top: 10px; }

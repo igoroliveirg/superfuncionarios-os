@@ -584,7 +584,7 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen, customAg
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
-  const ALL = [...EMPLOYEES, ...customAgents, ROTINAS]
+  const ALL = [...EMPLOYEES, ...customAgents, ROTINAS, { id: 'settings', name: 'Criar agente', color: '#5a6072', glow: 'rgba(90,96,120,.5)', isCreate: true }]
   const anchor = ALL.find((e) => e.id === activeId) || null
   const sats = ALL.filter((e) => e.id !== activeId)
   const N = sats.length
@@ -627,16 +627,16 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen, customAg
         {geo.map(({ e, dx, dy, i }) => (
           <div key={e.id} className="sat-slot" style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, '--si': i }}>
             <button
-              className={`sat ${e.id === 'rotinas' ? 'sat-rotinas' : ''} ${activeId === e.id ? 'is-active' : ''}`}
+              className={`sat ${e.id === 'rotinas' ? 'sat-rotinas' : ''} ${e.isCreate ? 'sat-create' : ''} ${activeId === e.id ? 'is-active' : ''}`}
               data-sat={e.id}
               style={{ '--ring': e.color, '--glow': e.glow }}
               tabIndex={open ? 0 : -1}
               aria-hidden={!open}
-              aria-label={e.id === 'rotinas' ? 'Abrir Rotinas e automações' : `Abrir ${e.name}`}
+              aria-label={e.isCreate ? 'Criar um novo agente' : e.id === 'rotinas' ? 'Abrir Rotinas e automações' : `Abrir ${e.name}`}
               onClick={(ev) => pick(e.id, ev)}
             >
               <span className="sat-bub">
-                {e.id === 'rotinas' ? <RotinasIcon /> : <img src={e.img} alt="" />}
+                {e.isCreate ? <PlusIcon /> : e.id === 'rotinas' ? <RotinasIcon /> : <img src={e.img} alt="" />}
               </span>
               <span className="sat-tip" aria-hidden="true">{e.name}</span>
             </button>
@@ -729,6 +729,14 @@ function GearIcon({ className = 'sat-ic' }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="2" />
       <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PlusIcon({ className = 'sat-ic' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   )
 }
@@ -900,8 +908,8 @@ function Desktop({ site, onPresent, pack, siteCtx, customAgents, onCreateAgent, 
   return (
     <div className="desktop">
       <div className="desk-chrome">
-        <button className="chrome-gear" onClick={() => open('settings')} title="Configurações (criar agente)" aria-label="Configurações">
-          <GearIcon className="cg-ic" />
+        <button className="chrome-newagent" onClick={() => open('settings')} title="Criar um novo agente">
+          <PlusIcon className="na-plus" /> Criar agente
         </button>
         {onToggleZoom && (
           <button
