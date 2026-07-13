@@ -683,7 +683,8 @@ function HubDashboard({ onOpen, site }) {
 }
 
 function Desktop({ site, onPresent, pack, siteCtx, zoomMode, onToggleZoom }) {
-  const [activeId, setActiveId] = useState(null) // idle → hub radial; abre 1 janela por vez
+  // abre direto no 1º agente (Pesquisa); fechar a janela revela o hub radial
+  const [activeId, setActiveId] = useState(EMPLOYEES[0].id)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
 
