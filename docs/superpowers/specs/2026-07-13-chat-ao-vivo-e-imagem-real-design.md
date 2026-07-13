@@ -1,7 +1,7 @@
 # Super Funcionários OS: Chat ao vivo (Claude) + imagem real (gpt-image-2)
 
 **Data:** 2026-07-13
-**Status:** rascunho de design, aguardando revisão do Igor
+**Status:** aprovado para implementação (Igor travou params e passou a chave; Q1/Q2 no default recomendado)
 **Autor:** Igor + Claude
 
 ## 1. O ponto
@@ -20,14 +20,17 @@ Princípio herdado que continua valendo: **bulletproof no palco**. Tudo que é a
 
 ## 3. Decisões de escopo
 
-Perguntei duas coisas ao Igor; ele estava afk. Segui com a recomendação. **Confirmar ou inverter:**
+Travadas com o Igor (13/07):
 
 - **[Q1] Onde a imagem real aparece:** nos painéis **e** no chat. Na demo automática, o criativo do Construtor e os posts do Criador viram imagem real do site (substituem o CSS). No modo Conversa, o Igor pede imagem e o funcionário gera.
 - **[Q2] Alcance do chat ao vivo:** nos **5 funcionários**. Motor único de conversa, um system prompt por funcionário derivado do `pack`. A ferramenta de imagem fica disponível para quem faz sentido (Construtor e Criador); os outros conversam em texto.
+- **Imagem:** **pura, sem texto sobreposto**. O `gpt-image-2` gera um visual limpo do negócio (produto/conceito/lifestyle do nicho), sem tentar renderizar a copy dentro dos pixels. A copy (hook/sub/cta) aparece como legenda ao lado/abaixo do card, não em cima da imagem. Evita o texto-borrado clássico de IA e respeita a escolha do Igor.
+- **Qualidade:** `quality: "medium"` (~3 centavos, mais rápido). `#hq` sobe pra `high` nos takes de fechamento.
+- **Modelo do chat:** Claude **Sonnet**.
 
 Decididas por mim (engenharia, não bifurcação de produto), abertas a veto:
 
-- **[Q3] Latência e custo na demo:** híbrido. Pré-gera 1 criativo herói durante o "Analisando" (já pronto quando abre o Construtor); o resto gera sob demanda quando o bloco aparece, com loader "produzindo imagem…". `quality: "medium"` como padrão da demo (~3 centavos, mais rápido); `#hq` sobe pra `high` nos takes de fechamento.
+- **[Q3] Latência e custo na demo:** híbrido. Pré-gera 1 criativo herói durante o "Analisando" (já pronto quando abre o Construtor); o resto gera sob demanda quando o bloco aparece, com loader "produzindo imagem…".
 - **Streaming:** não na v1. O loop de ferramenta do Claude é multi-etapa por natureza (texto, tool_use, roda a tool, tool_result, texto final); o servidor roda o loop inteiro e devolve o turno pronto. A UI simula digitação com o `<Typewriter>` que já existe. Revisita se a espera incomodar.
 
 ## 4. Arquitetura
@@ -74,7 +77,7 @@ EmployeeContent (Construtor/Conteúdo)
 - Novo papel de mensagem `image`: renderiza o b64 num card emoldurado (reusa a moldura de `.bb-img`/criativo), com `alt` e selo discreto "gerado agora".
 
 **`src/employees.jsx`**
-- **Construtor** (`CreativeCard`/`DesignArtifact`): quando `pack.construtor.designs.images[fmt]` existe, a imagem gerada entra como **fundo do criativo** e a copy do anúncio fica **sobreposta** (recomendo overlay, não substituição: continua lendo como anúncio desenhado, com a frase legível e brandada). Sem imagem, cai no CSS de hoje. Loader no card enquanto gera sob demanda.
+- **Construtor** (`CreativeCard`/`DesignArtifact`): quando `pack.construtor.designs.images[fmt]` existe, o card mostra a **imagem pura gerada** (sem copy por cima). A copy do anúncio (hook/sub/cta) fica como **legenda abaixo/ao lado** do card, não sobreposta. Sem imagem, cai no CSS de hoje. Loader no card enquanto gera sob demanda.
 - **Criador de Conteúdo**: os posts do `BuildBlock.Grid` recebem `t.src` = imagem gerada (o Grid já suporta); o `FeedPreview` do post herói mostra imagem gerada. Sem imagem, mantém o selo atual.
 
 **`src/App.jsx`**
@@ -120,9 +123,6 @@ Unidades pequenas, testáveis sem rede (SDKs mockados, como o resto da suíte):
 - Geração de **vídeo** pela OpenAI (o vídeo segue teatro HeyGen/CSS).
 - UI de edição de imagem (um "gerar de novo" basta).
 
-## 10. Perguntas em aberto (pro Igor)
+## 10. Resolvido
 
-1. Confirmar Q1 (painéis + chat) e Q2 (5 funcionários) ou inverter.
-2. Imagem no criativo: **overlay** da copy sobre a imagem (minha recomendação) ou imagem **pura** sem copy?
-3. Qualidade padrão da demo: `medium` (rápido, barato) ou `high` (mais nítido, ~4x mais caro/lento)?
-4. Modelo do chat: Claude Sonnet (equilíbrio) serve, ou prefere o mais capaz?
+Todos os pontos travados: Q1 (painéis + chat), Q2 (5 funcionários), imagem pura sem texto, `quality: medium`, chat no Claude Sonnet, `OPENAI_API_KEY` no `.env`. Nada pendente para começar a implementação.
