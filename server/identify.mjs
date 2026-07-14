@@ -13,6 +13,19 @@ const clean = (s) => {
   return v
 }
 
+// valida o chute de cor do modelo: hex #rrggbb saturado (não neutro/quase-branco/
+// preto). Só entra como ÚLTIMO recurso, quando render + heurístico falham (site
+// 100% blindado, ex.: SPA anti-bot cujo scrape não expõe cor nenhuma).
+const validBrandHex = (s) => {
+  const m = String(s || '').trim().match(/^#?([0-9a-fA-F]{6})$/)
+  if (!m) return null
+  const hex = `#${m[1].toLowerCase()}`
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2
+  const sat = max === min ? 0 : (l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min))
+  return (sat < 0.2 || l > 0.92 || l < 0.08) ? null : hex
+}
+
 const TOOL = {
   name: 'identify',
   description: 'Classifica o site do cliente num nicho e extrai variáveis da marca.',
@@ -59,9 +72,10 @@ export async function identify(url) {
     const niche = NICHE_IDS.includes(out.niche) ? out.niche : 'generico'
     const empresa = clean(out.empresa)
     const result = { ...FALLBACK, ...out, niche, empresa, oferta: clean(out.oferta), segmento: clean(out.segmento) }
-    // cor exata do botão (render) preferida; heurístico HTML/CSS complementa.
-    // Cor vazia → landing usa o accent do nicho (nunca o chute do modelo).
-    result.primaryColor = (render && render.color) || heur.color || ''
+    // cor exata do botão (render) preferida; heurístico HTML/CSS complementa;
+    // e, como último recurso pra site 100% blindado, o chute validado do modelo
+    // (melhor que o accent genérico do nicho numa demo). Vazia → accent do nicho.
+    result.primaryColor = (render && render.color) || heur.color || validBrandHex(out.primaryColor) || ''
     result.theme = (render && render.theme) || heur.theme || 'dark'
     return result
   } catch (e) {
