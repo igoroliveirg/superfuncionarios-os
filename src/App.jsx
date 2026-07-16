@@ -1,9 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react'
 import { EMPLOYEES, EmployeeContent, SCRIPTS } from './employees.jsx'
-import { useAgentChat, ChatPanel, ZoomCtx } from './chat.jsx'
+import { useAgentChat, useLiveChat, ChatPanel, LivePanels, ZoomCtx } from './chat.jsx'
 import { AudioProvider, useAudio } from './audio.jsx'
 import { Presentation } from './presentation.jsx'
 import { resolvePack } from './niches/index.js'
+import { mergePack } from './niches/util.js'
+import { SavingsBar, resetSavings } from './savings.jsx'
 
 // Marca da Super Funcionários: três barras (eco do favicon do GDIA)
 function Mark() {
@@ -310,9 +312,11 @@ function PhaseTransition({ phaseKey, dir = 'fwd', children }) {
 //  DESKTOP
 // ════════════════════════════════════════════════════════════════════
 
-function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack }) {
+function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen, pack, siteCtx }) {
   const { ref, flyToDock } = useGenieWindow(origin)
-  const chat = useAgentChat(SCRIPTS[emp.id]) // conversa viva do agente ativo
+  const chat = useAgentChat(pack.scripts?.[emp.id] || SCRIPTS[emp.id]) // demo roteirizada (personalizada via pack)
+  const [mode, setMode] = useState('demo') // demo (roteiro) | live (conversa que alimenta o painel central)
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: chat.messages[0]?.text })
   const _i = EMPLOYEES.findIndex((e) => e.id === emp.id)
   const nextAgent = _i < EMPLOYEES.length - 1 ? EMPLOYEES[_i + 1] : null // último encerra o ciclo
 
@@ -378,9 +382,23 @@ function Window({ emp, site, origin, getExitTarget, onClose, onMinimize, onOpen,
         </div>
       </div>
       <div className="window-body has-chat" ref={bodyRef}>
-        <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} />
+        {mode === 'live' ? (
+          <div className="emp live-central" style={{ '--accent': emp.color, '--accent-ink': emp.ink }}>
+            <div className="emp-head">
+              <div>
+                <h2>{emp.name}</h2>
+                <p className="muted">Conversa ao vivo · o resultado aparece aqui</p>
+              </div>
+            </div>
+            {live.panels.length
+              ? <LivePanels panels={live.panels} accent={emp.color} ink={emp.ink} />
+              : <div className="live-empty">Pergunte algo aqui do lado. O que der pra mostrar vira persona, lista, gráfico ou tabela nesta tela.</div>}
+          </div>
+        ) : (
+          <EmployeeContent id={emp.id} accent={emp.color} ink={emp.ink} site={site} step={chat.step} pack={pack} onOpenAgent={onOpen} />
+        )}
       </div>
-      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} />
+      <ChatPanel emp={emp} chat={chat} nextAgent={nextAgent} onNext={() => onOpen?.(nextAgent.id)} live={live} mode={mode} setMode={setMode} />
     </div>
   )
 }
@@ -562,11 +580,11 @@ function RoutinesWindow({ origin, getExitTarget, onClose, onMinimize }) {
 
 // Launcher radial: um círculo central (robô ativo, ou marca) e os OUTROS
 // robôs florescem em volta. Janela única.
-const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
+const Launcher = React.forwardRef(function Launcher({ activeId, onOpen, customAgents = [] }, ref) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
-  const ALL = [...EMPLOYEES, ROTINAS]
+  const ALL = [...EMPLOYEES, ...customAgents, ROTINAS, { id: 'settings', name: 'Criar agente', color: '#5a6072', glow: 'rgba(90,96,120,.5)', isCreate: true }]
   const anchor = ALL.find((e) => e.id === activeId) || null
   const sats = ALL.filter((e) => e.id !== activeId)
   const N = sats.length
@@ -609,16 +627,16 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
         {geo.map(({ e, dx, dy, i }) => (
           <div key={e.id} className="sat-slot" style={{ '--dx': `${dx}px`, '--dy': `${dy}px`, '--si': i }}>
             <button
-              className={`sat ${e.id === 'rotinas' ? 'sat-rotinas' : ''} ${activeId === e.id ? 'is-active' : ''}`}
+              className={`sat ${e.id === 'rotinas' ? 'sat-rotinas' : ''} ${e.isCreate ? 'sat-create' : ''} ${activeId === e.id ? 'is-active' : ''}`}
               data-sat={e.id}
               style={{ '--ring': e.color, '--glow': e.glow }}
               tabIndex={open ? 0 : -1}
               aria-hidden={!open}
-              aria-label={e.id === 'rotinas' ? 'Abrir Rotinas e automações' : `Abrir ${e.name}`}
+              aria-label={e.isCreate ? 'Criar um novo agente' : e.id === 'rotinas' ? 'Abrir Rotinas e automações' : `Abrir ${e.name}`}
               onClick={(ev) => pick(e.id, ev)}
             >
               <span className="sat-bub">
-                {e.id === 'rotinas' ? <RotinasIcon /> : <img src={e.img} alt="" />}
+                {e.isCreate ? <PlusIcon /> : e.id === 'rotinas' ? <RotinasIcon /> : <img src={e.img} alt="" />}
               </span>
               <span className="sat-tip" aria-hidden="true">{e.name}</span>
             </button>
@@ -649,8 +667,212 @@ const Launcher = React.forwardRef(function Launcher({ activeId, onOpen }, ref) {
   )
 })
 
-function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
-  const [activeId, setActiveId] = useState('pesquisa') // janela única (ou null)
+// hub radial dos 5 (Onda 3): estado idle do desktop. Cada avatar abre o agente
+// (reusa onOpen, com o rect pro genie). Porta o dashboard da spec os-spec/real.
+const HUB_POS = ['n-top', 'n-ur', 'n-lr', 'n-ll', 'n-ul']
+function HubDashboard({ onOpen, site }) {
+  return (
+    <div className="hub-dash">
+      <div className="hub">
+        <div className="hub-ring" aria-hidden="true" />
+        <div className="hub-center" aria-hidden="true"><span /></div>
+        {EMPLOYEES.map((e, i) => (
+          <button
+            key={e.id}
+            className={`hub-node ${HUB_POS[i] || ''}`}
+            style={{ '--c': e.color }}
+            aria-label={`Ver ${e.name}`}
+            onClick={(ev) => {
+              const r = ev.currentTarget.getBoundingClientRect()
+              onOpen(e.id, { x: r.left, y: r.top, w: r.width, h: r.height })
+            }}
+          >
+            <img src={e.img} alt="" />
+          </button>
+        ))}
+      </div>
+      <h2 className="hub-title">Seus 5 super funcionários estão prontos.</h2>
+      <p className="hub-sub">Toque num funcionário pra ver o que ele já produziu pra <b>{site}</b>. Não são 5 chats: é uma <b>esteira</b>, um alimenta o próximo.</p>
+      <SavingsBar eq="o trabalho de um time de marketing, sem folha de pagamento" />
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  CONFIGURAÇÕES · criar agente personalizado (conversável, só na sessão)
+// ════════════════════════════════════════════════════════════════════
+
+// pool de fotos pré-definidas (robôs no estilo da casa). A cor do agente
+// segue a foto escolhida.
+const AVATAR_POOL = [
+  { img: '/avatars/a1.png', color: '#ff5a5f', ink: '#c1272d', glow: 'rgba(255,90,95,.5)' },
+  { img: '/avatars/a2.png', color: '#ffb020', ink: '#9a6600', glow: 'rgba(255,176,32,.5)' },
+  { img: '/avatars/a3.png', color: '#1fd1c6', ink: '#0a7f77', glow: 'rgba(31,209,198,.5)' },
+  { img: '/avatars/a4.png', color: '#7c6cff', ink: '#4a3fd0', glow: 'rgba(124,108,255,.5)' },
+  { img: '/avatars/a5.png', color: '#4aa3ff', ink: '#0d6fc4', glow: 'rgba(74,163,255,.5)' },
+]
+
+let _customSeq = 0
+export function makeCustomAgent({ name, desc, avatar }) {
+  return {
+    id: `custom-${_customSeq++}`, custom: true,
+    name: name || 'Novo agente', desc: desc || '',
+    role: 'Agente personalizado', code: 'AG.PERSONALIZADO',
+    img: avatar.img, color: avatar.color, ink: avatar.ink, glow: avatar.glow,
+  }
+}
+
+const SETTINGS = { id: 'settings', name: 'Configurações', color: '#7c8195', glow: 'rgba(90,96,120,.5)' }
+
+function GearIcon({ className = 'sat-ic' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function PlusIcon({ className = 'sat-ic' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+// Janela de Configurações: cria um novo agente (foto + nome + descrição).
+function SettingsWindow({ origin, getExitTarget, onClose, onMinimize, onCreate, customAgents }) {
+  const { ref, flyToDock } = useGenieWindow(origin)
+  const [picked, setPicked] = useState(0)
+  const [name, setName] = useState('')
+  const [desc, setDesc] = useState('')
+
+  const create = () => {
+    onCreate({ name: name.trim(), desc: desc.trim(), avatar: AVATAR_POOL[picked] })
+    setName(''); setDesc('')
+  }
+  const handleMinimize = () => flyToDock(getExitTarget?.(), onMinimize)
+  const handleClose = () => flyToDock(getExitTarget?.(), onClose)
+
+  return (
+    <div ref={ref} tabIndex={-1} role="dialog" aria-label="Configurações" className="window" style={{ '--win-glow': SETTINGS.glow }}>
+      <div className="titlebar" style={{ borderTopColor: SETTINGS.color }}>
+        <div className="traffic">
+          <button className="tl close" onClick={handleClose} aria-label="Fechar" />
+          <button className="tl min" onClick={handleMinimize} aria-label="Voltar ao launcher" />
+        </div>
+        <div className="title">
+          <span className="title-av title-av-ic" style={{ boxShadow: `0 0 0 2px ${SETTINGS.color}` }}><GearIcon className="rot-head-ic" /></span>
+          <span>Configurações</span>
+          <span className="title-code" style={{ color: '#454a5a' }}>AGENTES</span>
+        </div>
+        <div className="title-model"><span className="dot" style={{ background: SETTINGS.color }} /> criar novo agente</div>
+      </div>
+      <div className="window-body">
+        <div className="settings">
+          <div className="emp-head">
+            <div>
+              <h2>Criar um novo agente</h2>
+              <p className="muted">Escolha uma foto, dê um nome e descreva o que ele faz. Ele entra no launcher e você conversa com ele na hora.</p>
+            </div>
+          </div>
+
+          <div className="set-form">
+            <label className="set-label">Foto</label>
+            <div className="avatar-pick" role="radiogroup" aria-label="Foto do agente">
+              {AVATAR_POOL.map((a, i) => (
+                <button key={i} type="button" role="radio" aria-checked={picked === i}
+                  className={`av-opt ${picked === i ? 'sel' : ''}`} style={{ '--ring': a.color }}
+                  onClick={() => setPicked(i)}>
+                  <img src={a.img} alt="" />
+                </button>
+              ))}
+            </div>
+
+            <label className="set-label" htmlFor="ag-name">Nome</label>
+            <input id="ag-name" className="set-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: A Atendente" maxLength={28} />
+
+            <label className="set-label" htmlFor="ag-desc">O que ele faz</label>
+            <textarea id="ag-desc" className="set-textarea" value={desc} onChange={(e) => setDesc(e.target.value)} rows={3}
+              placeholder="Descreva o papel dele. Ex: responde dúvidas de clientes no WhatsApp, qualifica o lead e agenda a reunião." />
+
+            <button className="set-create" style={{ background: AVATAR_POOL[picked].color, color: '#15101e' }}
+              onClick={create} disabled={!desc.trim()}>
+              Criar agente
+            </button>
+            {!desc.trim() && <span className="set-hint muted">Descreva o que ele faz pra liberar.</span>}
+          </div>
+
+          {customAgents.length > 0 && (
+            <div className="set-list">
+              <span className="klabel-sm">Agentes criados nesta sessão</span>
+              {customAgents.map((a) => (
+                <div key={a.id} className="set-agent" style={{ '--accent': a.color }}>
+                  <img src={a.img} alt="" style={{ boxShadow: `0 0 0 2px ${a.color}` }} />
+                  <div className="set-agent-main">
+                    <b>{a.name}</b>
+                    <span className="muted">{a.desc || 'sem descrição'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Janela de um agente personalizado: central genérica + chat ao vivo (liveOnly).
+function CustomAgentWindow({ emp, origin, getExitTarget, onClose, onMinimize, siteCtx, pack }) {
+  const { ref, flyToDock } = useGenieWindow(origin)
+  const chat = useAgentChat({ greeting: `Oi, sou ${emp.name}. Me diz o que você precisa e eu trabalho pra ${siteCtx?.empresa || 'sua empresa'}.`, turns: [] })
+  const live = useLiveChat({ empId: emp.id, siteCtx, pack, greeting: chat.messages[0]?.text, desc: emp.desc })
+  const handleMinimize = () => flyToDock(getExitTarget?.(), onMinimize)
+  const handleClose = () => flyToDock(getExitTarget?.(), onClose)
+
+  return (
+    <div ref={ref} tabIndex={-1} role="dialog" aria-label={emp.name} className="window" style={{ '--win-glow': emp.glow }}>
+      <div className="titlebar" style={{ borderTopColor: emp.color }}>
+        <div className="traffic">
+          <button className="tl close" onClick={handleClose} aria-label="Fechar" />
+          <button className="tl min" onClick={handleMinimize} aria-label="Voltar ao launcher" />
+        </div>
+        <div className="title">
+          <img src={emp.img} alt="" className="title-av" style={{ boxShadow: `0 0 0 2px ${emp.color}` }} />
+          <span>{emp.name}</span>
+          <span className="title-code" style={{ color: emp.ink }}>{emp.code}</span>
+        </div>
+        <div className="title-model"><span className="dot" style={{ background: emp.color }} /> rodando na sua IA</div>
+      </div>
+      <div className="window-body has-chat">
+        <div className="emp custom-emp" style={{ '--accent': emp.color, '--accent-ink': emp.ink }}>
+          <div className="emp-head">
+            <div>
+              <h2>{emp.name}</h2>
+              <p className="muted">Agente personalizado a partir de {siteCtx?.empresa || 'sua empresa'}</p>
+            </div>
+          </div>
+          {live.panels.length ? (
+            <LivePanels panels={live.panels} accent={emp.color} ink={emp.ink} />
+          ) : (
+            <div className="custom-brief">
+              <img className="custom-face" src={emp.img} alt="" style={{ boxShadow: `0 8px 30px ${emp.glow}` }} />
+              <p className="custom-desc">{emp.desc || 'Converse comigo pra eu começar a trabalhar.'}</p>
+              <p className="muted custom-hint">Fale comigo aqui do lado. Respondo com base no seu site e no que você me pediu pra ser.</p>
+            </div>
+          )}
+        </div>
+      </div>
+      <ChatPanel emp={emp} chat={chat} live={live} mode="live" setMode={() => {}} liveOnly />
+    </div>
+  )
+}
+
+function Desktop({ site, onPresent, pack, siteCtx, customAgents, onCreateAgent, zoomMode, onToggleZoom }) {
+  // abre direto no 1º agente (Pesquisa); fechar a janela revela o hub radial
+  const [activeId, setActiveId] = useState(EMPLOYEES[0].id)
   const [origin, setOrigin] = useState(null)           // rect do círculo de origem (genie)
   const launcherRef = useRef(null)
 
@@ -675,12 +897,20 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [activeId])
 
-  const emp = EMPLOYEES.find((e) => e.id === activeId) || null
+  const roster = [...EMPLOYEES, ...customAgents]
+  const emp = roster.find((e) => e.id === activeId) || null
   const isRotinas = activeId === 'rotinas'
+  const isSettings = activeId === 'settings'
+
+  // cria o agente e já abre a janela dele
+  const createAndOpen = (spec) => { const ag = onCreateAgent?.(spec); if (ag) open(ag.id) }
 
   return (
     <div className="desktop">
       <div className="desk-chrome">
+        <button className="chrome-newagent" onClick={() => open('settings')} title="Criar um novo agente">
+          <PlusIcon className="na-plus" /> Criar agente
+        </button>
         {onToggleZoom && (
           <button
             className={`demo-toggle${zoomMode ? ' is-on' : ''}`}
@@ -699,13 +929,19 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
         )}
       </div>
       <div className="wallpaper">
-        {!activeId && (
-          <div className="wp-hint">
-            <h2>Seus 5 super funcionários estão prontos.</h2>
-            <p>Toque no círculo flutuante e escolha quem você quer ver, pra <b>{site}</b>.</p>
-          </div>
-        )}
-        {emp && (
+        {!activeId && <HubDashboard onOpen={open} site={site} />}
+        {emp && (emp.custom ? (
+          <CustomAgentWindow
+            key={emp.id}
+            emp={emp}
+            origin={origin}
+            getExitTarget={centerRectOf}
+            onClose={close}
+            onMinimize={close}
+            siteCtx={siteCtx}
+            pack={pack}
+          />
+        ) : (
           <Window
             key={emp.id}
             emp={emp}
@@ -716,8 +952,9 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
             onMinimize={close}
             onOpen={open}
             pack={pack}
+            siteCtx={siteCtx}
           />
-        )}
+        ))}
         {isRotinas && (
           <RoutinesWindow
             key="rotinas"
@@ -727,8 +964,19 @@ function Desktop({ site, onPresent, pack, zoomMode, onToggleZoom }) {
             onMinimize={close}
           />
         )}
+        {isSettings && (
+          <SettingsWindow
+            key="settings"
+            origin={origin}
+            getExitTarget={centerRectOf}
+            onClose={close}
+            onMinimize={close}
+            onCreate={createAndOpen}
+            customAgents={customAgents}
+          />
+        )}
       </div>
-      <Launcher ref={launcherRef} activeId={activeId} onOpen={open} />
+      <Launcher ref={launcherRef} activeId={activeId} onOpen={open} customAgents={customAgents} />
     </div>
   )
 }
@@ -753,14 +1001,44 @@ function Shell() {
   const prevPhaseRef = useRef('boot')
   const [niche, setNiche] = useState('generico')
   const [vars, setVars] = useState({})
+  const [gen, setGen] = useState(null) // conteúdo gerado pela IA a partir do site real
+  const [images, setImages] = useState({}) // imagens reais geradas (gpt-image-2): { cFeed, cStory, post0 }
+  const [customAgents, setCustomAgents] = useState([]) // agentes criados nas Configurações (só na sessão)
   const identifyRef = useRef(null)
-  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio)
-  const pack = useMemo(() => resolvePack(niche, {
-    empresa: vars.empresa || 'superfuncionarios',
-    oferta: vars.oferta || 'a imersão',
-    primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
-    theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
-  }), [niche, vars])
+  const generateRef = useRef(null)
+
+  const createAgent = useCallback((spec) => {
+    const ag = makeCustomAgent(spec)
+    setCustomAgents((list) => [...list, ag])
+    return ag
+  }, [])
+  // pack resolvido = nicho + variáveis do cliente (com defaults seguros p/ vazio),
+  // e por cima o conteúdo personalizado do site (gen). Sem gen → molde do nicho.
+  const pack = useMemo(() => {
+    const base = resolvePack(niche, {
+      empresa: vars.empresa || 'superfuncionarios',
+      oferta: vars.oferta || 'a imersão',
+      primaryColor: vars.primaryColor || '', // vazio → landing usa laranja/accent do nicho
+      theme: vars.theme || 'dark',           // claro/escuro segue o site do cliente
+    })
+    let p = gen ? mergePack(base, gen) : base
+    // sobrepõe as imagens geradas sem tocar nos arrays (deepMerge substituiria os posts)
+    if (images.cFeed || images.cStory) {
+      p = { ...p, construtor: { ...p.construtor, designs: { ...p.construtor.designs, images: { ...(p.construtor.designs?.images), feed: images.cFeed, story: images.cStory } } } }
+    }
+    if (images.post0 && p.conteudo?.posts?.[0]) {
+      p = { ...p, conteudo: { ...p.conteudo, posts: p.conteudo.posts.map((post, i) => (i === 0 ? { ...post, img: images.post0 } : post)) } }
+    }
+    return p
+  }, [niche, vars, gen, images])
+
+  // contexto do site pro chat ao vivo (empresa/oferta/nicho/cor da marca)
+  const siteCtx = useMemo(() => ({
+    empresa: vars.empresa || 'sua empresa',
+    oferta: vars.oferta || 'sua oferta',
+    niche,
+    primaryColor: vars.primaryColor || '',
+  }), [vars, niche])
 
   // entra no modo apresentação (tela cheia pedida no gesto do clique)
   const startPresent = useCallback(() => {
@@ -803,6 +1081,8 @@ function Shell() {
   // ao analisar o site: dispara a identificação do nicho (1 chamada real) por
   // baixo da animação que já existe. Override de palco: #niche=<id> pula a chamada.
   const startAnalyze = useCallback((url) => {
+    resetSavings() // cada análise/demo começa o contador do zero e ele sobe a cada agente
+    setImages({})  // limpa imagens da análise anterior
     setSite(url)
     setPhase('analyze')
     const m = typeof window !== 'undefined' && window.location.hash.match(/niche=([a-z]+)/i)
@@ -813,13 +1093,39 @@ function Shell() {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
       }).then((r) => r.json()).catch(() => ({ niche: 'generico' }))
     }
+    // em paralelo: gera o conteúdo personalizado a partir do site real (a chamada
+    // pesada). #nogen pula a geração (mostra o molde do nicho, p/ palco/offline).
+    const skipGen = typeof window !== 'undefined' && /nogen/i.test(window.location.hash)
+    generateRef.current = skipGen ? Promise.resolve(null) : fetch('/api/generate', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }),
+    }).then((r) => r.json()).catch(() => null)
   }, [])
 
-  // ao fim da animação: aguarda a identificação (timeout 8s → genérico) e entra.
+  // gera 1 imagem via /api/image. Respeita #noimg (desliga) e #hq (quality high).
+  // Retorna o objeto {b64,format,alt} ou null; a UI cai no criativo CSS quando null.
+  const genImage = useCallback((args) => {
+    const h = typeof window !== 'undefined' ? window.location.hash : ''
+    if (/noimg/i.test(h)) return Promise.resolve(null)
+    const quality = /\bhq\b/i.test(h) ? 'high' : 'medium'
+    return fetch('/api/image', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...args, quality }),
+    }).then((r) => r.json()).then((img) => (img && img.b64 ? img : null)).catch(() => null)
+  }, [])
+
+  // ao fim da animação: aguarda identificação + geração (timeout 30s → molde) e entra.
   const finalize = useCallback(async () => {
-    const timeout = new Promise((res) => setTimeout(() => res(null), 15000))
-    const out = (identifyRef.current ? await Promise.race([identifyRef.current, timeout]) : null) || {}
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(() => res(null), ms))])
+    // identify (leve) e generate (pesada) já disparam em paralelo no startAnalyze;
+    // aguardamos as duas em paralelo, sob um único orçamento de 30s (não em série,
+    // senão um hang da identify roubaria até 30s antes de a geração ser lida).
+    const [outRaw, genOut] = await Promise.all([
+      identifyRef.current ? withTimeout(identifyRef.current, 30000) : Promise.resolve(null),
+      generateRef.current ? withTimeout(generateRef.current, 30000) : Promise.resolve(null),
+    ])
+    const out = outRaw || {}
     if (out.niche) setNiche(out.niche)
+    if (genOut && !genOut._error) setGen(genOut)
     // overrides de palco (sites blindados não expõem nada): #theme=light|dark e
     // #color=rrggbb forçam tema e cor da marca manualmente.
     const hash = typeof window !== 'undefined' ? window.location.hash : ''
@@ -829,7 +1135,16 @@ function Shell() {
     const primaryColor = cm ? `#${cm[1]}` : out.primaryColor
     setVars({ empresa: out.empresa, oferta: out.oferta, primaryColor, theme })
     goDesktop()
-  }, [])
+
+    // pré-gera as imagens reais (herói) em paralelo; cada uma entra quando chega,
+    // sem bloquear a entrada no desktop. #noimg pula tudo (tratado no genImage).
+    const ctx = { niche: out.niche || 'generico', empresa: out.empresa, oferta: out.oferta, brandColor: primaryColor }
+    const cHook = genOut?.construtor?.designs?.hook || ''
+    const pHook = genOut?.conteudo?.posts?.[0]?.txt || genOut?.conteudo?.legenda || ''
+    genImage({ ...ctx, hook: cHook, format: 'feed' }).then((img) => { if (img) setImages((s) => ({ ...s, cFeed: img })) })
+    genImage({ ...ctx, hook: cHook, format: 'story' }).then((img) => { if (img) setImages((s) => ({ ...s, cStory: img })) })
+    genImage({ ...ctx, hook: pHook, format: 'post' }).then((img) => { if (img) setImages((s) => ({ ...s, post0: img })) })
+  }, [genImage])
 
   // durante a saída do boot, já montamos o onboarding por baixo (push-in sem corte)
   const showOnboarding = ONBOARDING.includes(phase) || (phase === 'boot' && bootLeaving)
@@ -874,6 +1189,9 @@ function Shell() {
           site={site}
           onPresent={startPresent}
           pack={pack}
+          siteCtx={siteCtx}
+          customAgents={customAgents}
+          onCreateAgent={createAgent}
           zoomMode={zoomMode}
           onToggleZoom={() => setZoomMode((v) => !v)}
         />

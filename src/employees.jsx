@@ -1,7 +1,7 @@
 import React from 'react'
 import { Section, fmt, BuildBlock } from './chat.jsx'
 import { BASE_PACK } from './niches/base.js'
-import { safeAccent } from './niches/color.js'
+import { SavingsBar, recordArtifact } from './savings.jsx'
 
 // ── Metadados dos 5 super funcionários ───────────────────────────────
 // color = neon de assinatura (glows, dots, bordas) · ink = variante escura
@@ -27,9 +27,9 @@ export const EMPLOYEES = [
   },
   {
     id: 'construtor',
-    name: 'O Construtor de Páginas',
-    role: 'Página de vendas no ar em 24h',
-    code: 'AG.PAGINA',
+    name: 'O Construtor',
+    role: 'Construtor de anúncios: criativos prontos pra subir',
+    code: 'AG.CONSTRUTOR',
     img: '/agentes/construtor.png',
     color: '#ff8a3c', ink: '#a8500e', glow: 'rgba(255,138,60,.55)',
     win: { w: 860, h: 580, x: 130, y: 70 },
@@ -101,7 +101,7 @@ function Pill({ children, ink }) {
 // Output gated por `step` (0..6). Cada seção aparece quando step > i e
 // entra com .reveal. Texto de corpo em superfície sólida (#fff / #f7f8fa).
 function Pesquisador({ step = 0, accent, ink, site, pack }) {
-  const { persona, dores, medos, desejos, objecoes, schwartz, nivelAtivo, fontes } = pack.pesquisa
+  const { persona, dores, medos, desejos, objecoes, schwartz, nivelAtivo, fontes, angulos = [] } = pack.pesquisa
 
   return (
     <div className="emp pesq">
@@ -110,7 +110,7 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
           <h2>Pesquisa de mercado</h2>
           <p className="muted">Fonte: {site} · público de empresários high-ticket</p>
         </div>
-        {step >= 5
+        {step >= 6
           ? <Pill ink={ink}>Concluído</Pill>
           : <span className="pill working" style={{ borderColor: accent, color: ink }}>
               <span className="work-dot" style={{ background: accent }} /> Analisando
@@ -223,6 +223,28 @@ function Pesquisador({ step = 0, accent, ink, site, pack }) {
           </div>
         </div>
       </Section>
+
+      {/* ângulos rankeados por potencial de venda (Onda 3) */}
+      {angulos.length > 0 && (
+        <Section show={step > 5}>
+          <SectionTitle accent={accent}>Ângulos rankeados por potencial de venda</SectionTitle>
+          <div className="pa-angles">
+            {[...angulos].sort((a, b) => b.score - a.score).map((a, i) => (
+              <div key={i} className="pa-row" style={{ '--ad': `${i * 0.07}s` }}>
+                <span className="pa-rk" style={{ color: accent }}>{i + 1}</span>
+                <div className="pa-main">
+                  <div className="pa-head">
+                    <span className="pa-nm">{a.nome}</span>
+                    <span className="pa-sc" style={{ color: ink }}>{a.score}</span>
+                  </div>
+                  <div className="pa-track"><span className="pa-fill" style={{ width: `${a.score}%`, background: accent }} /></div>
+                  <p className="pa-why">{a.why}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
     </div>
   )
@@ -376,7 +398,8 @@ function RoiStat({ from, to, label, prefix = '', suffix = '', dec = 0, ink }) {
 }
 
 function Analista({ accent, ink, site, step = 0, pack }) {
-  const { FUNNEL, STAGE_COST, TREND, CHANNELS, CREATIVES, PAGE, PAGE_SECTIONS, CONTENT, FINAL } = pack.metricas
+  const { FUNNEL, STAGE_COST, TREND, CHANNELS, CREATIVES, PAGE, PAGE_SECTIONS, CONTENT, FINAL, leak, action } = pack.metricas
+  const [fired, setFired] = React.useState(false)
   const fmtInt = (n) => n.toLocaleString('pt-BR')
   const peak = Math.max(...TREND)
   const W = 460, H = 120, pad = 6
@@ -423,8 +446,10 @@ function Analista({ accent, ink, site, step = 0, pack }) {
       <Section show={step > 1}>
         <SectionTitle accent={accent}>Funil · do anúncio à venda</SectionTitle>
         <div className="funnel">
-          {FUNNEL.map((f, i) => (
-            <div key={f.k} className="fn-row fn-row-metr" style={{ '--ac': accent }}>
+          {FUNNEL.map((f, i) => {
+            const isLeak = leak && f.k === leak.stage
+            return (
+            <div key={f.k} className={`fn-row fn-row-metr ${isLeak ? 'fn-leak' : ''}`} style={{ '--ac': accent }}>
               <div className="fn-meta">
                 <span className="fn-k">{f.k}</span>
                 <span className="fn-sub">{f.sub}</span>
@@ -432,20 +457,57 @@ function Analista({ accent, ink, site, step = 0, pack }) {
               <div className="fn-bar-wrap">
                 <div
                   className="fn-bar building"
-                  style={{ '--w': `${Math.max(f.pct, 6)}%`, '--d': `${i * 70}ms`, background: ink }}
+                  style={{ '--w': `${Math.max(f.pct, 6)}%`, '--d': `${i * 70}ms`, background: isLeak ? '#d23b3b' : ink }}
                 >
                   <span className="fn-bv">{fmtInt(f.v)}</span>
                 </div>
               </div>
               {i > 0 && (
-                <span className="fn-conv" style={{ color: ink }}>
+                <span className="fn-conv" style={{ color: isLeak ? '#c0392b' : ink }}>
                   {f.pct}% <i>↘</i>
                 </span>
               )}
             </div>
-          ))}
+          )})}
         </div>
       </Section>
+
+      {/* 1b · Onde vaza dinheiro + ação que dispara a esteira (Onda 2) */}
+      {leak && action && (
+        <Section show={step > 1}>
+          <div className="leak-grid">
+            <div className="leakbox">
+              <h4>● Onde vaza dinheiro</h4>
+              <div className="leak-lost">− {leak.lostPerMonth} / mês</div>
+              <p>{leak.reason} Levar os {leak.actualPct}% pros {leak.expectedPct}% do nicho rende mais venda com a mesma verba.</p>
+            </div>
+            <div className="actionbox">
+              <h4>{action.title}</h4>
+              <p className="muted" style={{ fontSize: 12.5 }}>{action.sub}</p>
+              <ul className="fix-list">
+                {action.items.map((a, i) => (
+                  <li key={i}><span className={`who who-${a.who}`}>{a.label}</span><span>{a.text}</span></li>
+                ))}
+              </ul>
+              <div className="fire">
+                <button className="chip-mini" onClick={() => setFired(true)} disabled={fired}>
+                  {fired ? 'Correção disparada ✓' : 'Disparar correção'}
+                </button>
+                {fired && (
+                  <div className="fired reveal">
+                    <span className="klabel-sm">Esteira reiniciada — o Analista chamou os agentes sozinho</span>
+                    <div className="fired-row">
+                      <span className="fa"><i style={{ background: '#ff4f9a' }} /> Pesquisador ✓</span>
+                      <span className="fa"><i style={{ background: '#9b6bff' }} /> Copywriter ✓</span>
+                      <span className="fa"><i style={{ background: '#2fd49a' }} /> Rotinas ✓</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* 2 · Tendência + custo por etapa */}
       <Section show={step > 2}>
@@ -656,225 +718,99 @@ function Analista({ accent, ink, site, step = 0, pack }) {
   )
 }
 
-// ── 04 · O Construtor de Páginas ─────────────────────────────────────
-// Preview = landing escura real (vibe GDIA: purple-black + glow laranja).
-// Vidro só no chrome (lp-chrome). Corpo em superfície sólida escura (AA).
-// Toggle Desktop/Celular funcional. Tudo gated por step.
+// ── 04 · O Construtor ────────────────────────────────────────────────
+// Constrói os criativos (designs story/feed + vídeo avatar/voz/legenda) E a
+// página (preview escuro real). Três artefatos gated por step (A/B/C).
+// Toggle Desktop/Celular funcional. Vidro só no chrome (lp-chrome).
+
+// criativo (story 9:16 / feed 1:1): composição em camadas (fundo + glow + grão
+// + copy), com 3 tratamentos visuais reais. Parece anúncio, não wireframe.
+function CreativeCard({ cls, fmt, d, tr, fmtKey }) {
+  const img = d.images?.[fmtKey]
+  // Anúncio SEMPRE com texto por cima. Com imagem real (gpt-image-2) ela vira
+  // fundo (+ scrim pra legibilidade) e a copy fica sobreposta; sem imagem, cai
+  // na composição CSS. Nunca é imagem pura.
+  return (
+    <div className={`creative ${cls} ${img ? 'is-real' : `tr-${tr}`}`}>
+      {img ? (
+        <>
+          <img className="cr-real" src={`data:image/png;base64,${img.b64}`} alt={img.alt || `${d.brand}: ${d.hook}`} />
+          <div className="cr-scrim" aria-hidden="true" />
+        </>
+      ) : (
+        <>
+          <div className="cr-bg" aria-hidden="true" />
+          <div className="cr-orb" aria-hidden="true" />
+        </>
+      )}
+      <div className="cr-grain" aria-hidden="true" />
+      <span className="cr-fmt">{fmt}</span>
+      <div className="cr-inner">
+        <span className="cr-brand">{d.brand}</span>
+        <h4 className="cr-hook">{d.hook}</h4>
+        <p className="cr-sub">{d.sub}</p>
+        <span className="cr-cta">{d.cta} <i aria-hidden="true">→</i></span>
+      </div>
+    </div>
+  )
+}
+
+const TREATMENTS = [
+  { id: 'a', label: 'Gradiente', tone: 'Cor cheia, contraste alto. A versão mais forte.' },
+  { id: 'b', label: 'Duotone', tone: 'Clima de foto, premium e sóbrio.' },
+  { id: 'c', label: 'Dark neon', tone: 'Minimalista, foco total na frase.' },
+]
+
+// artefato Designs: story + feed + troca de tratamento (A/B/C real) + export
+function DesignArtifact({ designs }) {
+  const [tr, setTr] = React.useState('a')
+  const cur = TREATMENTS.find((t) => t.id === tr) || TREATMENTS[0]
+  return (
+    <div className="design-art reveal">
+      <div className="pair">
+        <CreativeCard cls="creative--story" fmt={designs.formatos?.[0] || 'STORY · 9:16'} d={designs} tr={tr} fmtKey="story" />
+        <CreativeCard cls="creative--feed" fmt={designs.formatos?.[1] || 'FEED · 1:1'} d={designs} tr={tr} fmtKey="feed" />
+      </div>
+      <div className="vars-side">
+        <span className="klabel-sm">Tratamentos</span>
+        <div className="vars">
+          {TREATMENTS.map((t) => (
+            <button key={t.id} className={`vt tr-${t.id} ${tr === t.id ? 'sel' : ''}`}
+              onClick={() => setTr(t.id)} aria-pressed={tr === t.id} title={t.label}>
+              <span>{t.label[0]}</span>
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ fontSize: 12.5 }}><b>{cur.label}.</b> {cur.tone}</p>
+        <button className="chip-mini" style={{ marginTop: 10 }}>Exportar PNG · 4 formatos</button>
+      </div>
+    </div>
+  )
+}
+
 function Construtor({ accent, ink, site, step = 0, pack }) {
-  const [device, setDevice] = React.useState('desktop')
-  // ao chegar no passo "ver no celular", troca pro mobile sozinho (1×) —
-  // no deck ninguém clica no toggle, então sem isso "nada muda"
-  const switchedRef = React.useRef(false)
-  React.useEffect(() => {
-    if (step > 4 && !switchedRef.current) { switchedRef.current = true; setDevice('mobile') }
-  }, [step])
-
-  const { blocos, ticker, depoimentos, countdown, hero, includes, offer } = pack.construtor
-
-  // identidade visual da landing = cor da marca do cliente (validada p/ tema
-  // escuro); se não houver cor utilizável, cai no accent do nicho; senão laranja.
-  const light = pack.construtor.theme === 'light' // landing clara segue o site do cliente
-  const themed = safeAccent(pack.construtor.brandColor) || safeAccent(pack.accentDefault)
-  const la = themed ? themed.accent : accent // acento da landing p/ usos inline
-  // no tema claro o realce de texto usa a variante mais escura (contraste no branco)
-  const lpVars = themed ? { '--lp-accent': themed.accent, '--lp-accent-2': themed.accent2, '--lp-grad': light ? themed.accent2 : themed.grad } : undefined
-
-  const showBlocos = step > 0
-  const showHero = step > 1
-  const showProva = step > 2
-  const showOferta = step > 3
-  const showMobile = step > 4   // turn "ver no celular" libera o toggle
-  const showPublicado = step > 5
-
-  const dev = showMobile ? device : 'desktop'
+  // Construtor de Anúncios: só os criativos (imagem com texto por cima).
+  // Vídeo e página de venda foram removidos (foco em anúncio).
+  const { designs } = pack.construtor
+  const showDesigns = step > 0
 
   return (
     <div className="emp build" style={{ '--accent': accent, '--accent-ink': ink }}>
       <div className="emp-head">
         <div>
-          <h2>Construtor de páginas</h2>
-          <p className="muted">Montando a partir de {site}</p>
+          <h2>Construtor de Anúncios</h2>
+          <p className="muted">Criativos do anúncio a partir de {site}</p>
         </div>
-        <Pill ink={ink}>{showPublicado ? 'No ar' : 'Montando…'}</Pill>
+        <Pill ink={ink}>{showDesigns ? 'Pronto' : 'Montando…'}</Pill>
       </div>
 
-      <div className="builder">
-        {/* ── lista de blocos à esquerda ── */}
-        <div className="blk-list">
-          <div className="blk-head">Blocos da página</div>
-          {showBlocos ? (
-            <>
-              {blocos.map((b, i) => (
-                <div
-                  key={i}
-                  className="blk reveal"
-                  style={{ '--ri': i, ...(i === 4 ? { borderColor: accent, color: ink } : null) }}
-                >
-                  <span className="blk-grip" aria-hidden="true">⋮⋮</span>
-                  <span className="blk-body">
-                    <span className="blk-name">{b.n}</span>
-                    <span className="blk-desc">{b.d}</span>
-                  </span>
-                  <span className="blk-ok" style={{ color: accent }}>✓</span>
-                </div>
-              ))}
-              <button className="add-blk" style={{ borderColor: accent, color: ink }}>+ Adicionar bloco</button>
-            </>
-          ) : (
-            <div className="blk-empty">A estrutura aparece aqui.</div>
-          )}
-        </div>
-
-        {/* ── preview da landing à direita ── */}
-        <div className="preview-wrap">
-          {showMobile && (
-            <div className="dev-toggle reveal" role="group" aria-label="Visualizar em">
-              <button
-                className={`dev-btn ${dev === 'desktop' ? 'on' : ''}`}
-                style={dev === 'desktop' ? { background: ink, borderColor: ink } : null}
-                onClick={() => setDevice('desktop')}
-                aria-pressed={dev === 'desktop'}
-              >▭ Desktop</button>
-              <button
-                className={`dev-btn ${dev === 'mobile' ? 'on' : ''}`}
-                style={dev === 'mobile' ? { background: ink, borderColor: ink } : null}
-                onClick={() => setDevice('mobile')}
-                aria-pressed={dev === 'mobile'}
-              >▯ Celular</button>
-            </div>
-          )}
-
-          <div className={`lp dev-${dev} ${light ? 'is-light' : ''}`} style={lpVars}>
-            {/* chrome do navegador = único vidro */}
-            <div className="lp-chrome">
-              <span /><span /><span />
-              <span className="lp-url">
-                <span className="lp-lock" aria-hidden="true">🔒</span>
-                {showPublicado ? site : 'rascunho · não publicado'}
-              </span>
-            </div>
-
-            {/* viewport escuro = a landing real */}
-            <div className="lp-view">
-              <div className="lp-glow" aria-hidden="true" />
-
-              {/* HERO */}
-              {showHero ? (
-                <header className="lp-hero reveal">
-                  <span className="lp-badge">
-                    {hero.badge.map((b, i) => i
-                      ? <React.Fragment key={i}><i>·</i>{b}</React.Fragment>
-                      : <React.Fragment key={i}>{b}</React.Fragment>)}
-                  </span>
-                  <p className="lp-pre">{hero.pre}</p>
-                  {hero.showAvatars && (
-                    <div className="lp-avatars" aria-hidden="true">
-                      {['pesquisa', 'copywriter', 'metricas', 'construtor', 'conteudo'].map((a, i) => (
-                        <img key={a} src={`/agentes/${a}.png`} alt="" style={{ '--ai': i }} />
-                      ))}
-                    </div>
-                  )}
-                  <h1 className="lp-h1">
-                    {showHero && step === 2
-                      ? <BuildBlock.Line as="span" className="lp-h1-line">{hero.h1Typed}</BuildBlock.Line>
-                      : <>{hero.h1Pre}<span className="lp-grad">{hero.h1Grad}</span>{hero.h1Post}</>}
-                  </h1>
-                  <p className="lp-sub">{hero.sub}</p>
-                  <div className="lp-cta-row">
-                    <button className="lp-cta">{hero.cta} <span aria-hidden="true">→</span></button>
-                    <span className="lp-cta-note">{hero.ctaNote}</span>
-                  </div>
-                </header>
-              ) : (
-                <div className="lp-skeleton" aria-hidden="true">
-                  <span className="sk sk-badge" /><span className="sk sk-h1" />
-                  <span className="sk sk-h1 short" /><span className="sk sk-sub" /><span className="sk sk-cta" />
-                </div>
-              )}
-
-              {/* PROVA: ticker + depoimentos */}
-              {showProva && (
-                <section className="lp-proof reveal">
-                  <div className="lp-ticker">
-                    {ticker.map((t, i) => (
-                      <div key={i} className="lp-tk" style={{ '--ri': i }}>
-                        <b>{t.v}</b><span>{t.l}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="lp-quotes">
-                    {depoimentos.map((d, i) => (
-                      <figure key={i} className="lp-quote reveal" style={{ '--ri': i }}>
-                        <span className="lp-q-mark" aria-hidden="true">“</span>
-                        <blockquote>{d.txt}</blockquote>
-                        <figcaption>
-                          <span className="lp-q-av" style={{ background: `linear-gradient(135deg, ${la}, ${themed ? themed.accent2 : '#ff3b30'})` }}>
-                            {d.nome[0]}
-                          </span>
-                          <span className="lp-q-id">
-                            <b>{d.nome}</b><span>{d.cargo}</span>
-                          </span>
-                          <span className="lp-q-check" aria-hidden="true">✔</span>
-                        </figcaption>
-                      </figure>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* OFERTA: o que entra + countdown + garantia */}
-              {showOferta && (
-                <section className="lp-offer reveal">
-                  <span className="lp-eyebrow">{offer.eyebrow}</span>
-                  <h2 className="lp-offer-h">{offer.hPre}<span className="lp-grad">{offer.hGrad}</span>{offer.hPost}</h2>
-                  <ul className="lp-includes">
-                    {includes.map((t, i) => (
-                      <li key={i} style={{ '--ri': i }}><span className="lp-ck" style={{ color: la }}>✓</span>{t}</li>
-                    ))}
-                  </ul>
-
-                  <div className="lp-countdown">
-                    <div className="lp-cd-top">
-                      <span className="lp-cd-lab">{offer.cdLab}</span>
-                      <span className="lp-cd-when">{offer.cdWhen}</span>
-                    </div>
-                    <div className="lp-cd-units">
-                      {countdown.map((c, i) => (
-                        <div key={i} className="lp-cd-u"><b>{c.v}</b><span>{c.l}</span></div>
-                      ))}
-                    </div>
-                    <p className="lp-cd-foot">{offer.cdFoot}</p>
-                  </div>
-
-                  <div className="lp-guarantee">
-                    <span className="lp-shield" aria-hidden="true">🛡</span>
-                    <div>
-                      <b>{offer.guaranteeTitle}</b>
-                      <span>{offer.guaranteeText}</span>
-                    </div>
-                  </div>
-                </section>
-              )}
-            </div>
-          </div>
-
-          {/* barra de publicação */}
-          {showPublicado && (
-            <div className="publish-bar reveal" style={{ borderColor: la }}>
-              <span className="pub-dot" style={{ background: la, boxShadow: `0 0 10px ${la}` }} />
-              <div className="pub-text">
-                <b style={{ color: ink }}>Publicado · no ar em 24h</b>
-                <span className="pub-checks">
-                  <i>✓ domínio</i><i>✓ pixel</i><i>✓ formulário no funil</i><i>✓ SSL</i>
-                </span>
-              </div>
-              <a className="pub-link" style={{ borderColor: la, color: la }} href={`https://${site}`} onClick={(e) => e.preventDefault()}>
-                Abrir página →
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Designs do anúncio (imagem real + texto por cima) */}
+      <section className="sec-block cnv-block">
+        <span className="block-tab"><span className="b">A</span> Designs do anúncio</span>
+        {showDesigns
+          ? <DesignArtifact designs={designs} />
+          : <div className="blk-empty">Aplico a copy do anúncio em story 9:16 e feed 1:1, com o texto por cima da imagem.</div>}
+      </section>
     </div>
   )
 }
@@ -885,7 +821,7 @@ function Construtor({ accent, ink, site, step = 0, pack }) {
 // Distinto do Copywriter (que faz anúncio). Último do fluxo: encerra.
 
 // Preview do post ORGÂNICO no feed (post de perfil — não anúncio)
-function FeedPreview({ accent, ink, caption, tags, type, igUser }) {
+function FeedPreview({ accent, ink, caption, tags, type, igUser, img }) {
   const [view, setView] = React.useState('mobile')
   const firstLine = caption.split('\n')[0]
   return (
@@ -910,9 +846,22 @@ function FeedPreview({ accent, ink, caption, tags, type, igUser }) {
           </div>
           <span className="ig-more">⋯</span>
         </div>
-        <div className="ig-media has-img">
-          <img className="ig-post-img" src="/deck/post-spacex.webp" alt="" />
-        </div>
+        {img ? (
+          <div className="ig-media ig-real" style={{ '--accent': accent }}>
+            <img src={`data:image/png;base64,${img.b64}`} alt={img.alt || firstLine} />
+            <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
+          </div>
+        ) : (
+          <div className="ig-media ig-poster" style={{ '--accent': accent }}>
+            <span className="igp-bg" aria-hidden="true" />
+            <span className="igp-orb" aria-hidden="true" />
+            <span className="igp-glyph" aria-hidden="true">{(igUser || '★').trim().charAt(0).toUpperCase()}</span>
+            <span className="igp-grain" aria-hidden="true" />
+            <span className="igp-scrim" aria-hidden="true" />
+            <p className="igp-hook">{firstLine}</p>
+            <span className="igp-tag">{type === 'Reels' ? '▶ Reels' : 'Publicação'}</span>
+          </div>
+        )}
         <div className="ig-actions">
           <span className="ig-ic">♡</span><span className="ig-ic">💬</span><span className="ig-ic">➦</span>
           <span className="ig-save">⬚</span>
@@ -1077,13 +1026,18 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
           </div>
         </div>
         <SectionTitle accent={accent}>Como vai aparecer no feed</SectionTitle>
-        <FeedPreview accent={accent} ink={ink} caption={legenda} tags={tags} type={open.tipo} igUser={igUser} />
+        <FeedPreview accent={accent} ink={ink} caption={legenda} tags={tags} type={open.tipo} igUser={igUser} img={open.img} />
         <SectionTitle accent={accent}>Seu feed enchendo no mês</SectionTitle>
         <div className="ig-profile-grid" style={{ '--bb-accent': accent }}>
           <BuildBlock.Grid
             waves={3}
             cadence={620}
-            tiles={Array.from({ length: 9 }, (_, i) => ({ id: i, label: pilares[i % pilares.length].ic }))}
+            tiles={Array.from({ length: 9 }, (_, i) => ({
+              id: i,
+              label: pilares[i % pilares.length].ic,
+              src: posts[i]?.img ? `data:image/png;base64,${posts[i].img.b64}` : null,
+              alt: posts[i]?.txt,
+            }))}
           />
           <p className="grid-hint muted">30 posts na fila · 3 ondas de 3 · clique pra preencher tudo</p>
         </div>
@@ -1112,8 +1066,18 @@ function CriadorDeConteudo({ accent, ink, step = 0, pack }) {
   )
 }
 
-// ── Roteador de conteúdo por funcionário ─────────────────────────────
-export function EmployeeContent({ id, accent, ink, site, step = 0, pack }) {
+// ── Economia por agente (quanto cada um substitui) ───────────────────
+// money/hours somam UMA vez quando o agente entrega o 1º artefato (dedup por
+// id no savings store). eq = equivalência mostrada na faixa daquele agente.
+const SAVE = {
+  pesquisa: { money: 8200, hours: 38, eq: 'uma pesquisa de agência: R$ 8.000 e 2 semanas' },
+  copywriter: { money: 5400, hours: 26, eq: 'um redator sênior dedicado, sem o salário' },
+  construtor: { money: 13000, hours: 86, eq: 'designer + editor + dev: 3 contratações num agente' },
+  conteudo: { money: 4200, hours: 40, eq: 'um social media inteiro, no piloto automático' },
+  metricas: { money: 4000, hours: 30, eq: 'um analista de dados lendo o funil todo dia' },
+}
+
+function agentPanel({ id, accent, ink, site, step, pack }) {
   switch (id) {
     case 'pesquisa': return <Pesquisador accent={accent} ink={ink} site={site} step={step} pack={pack} />
     case 'copywriter': return <Redator accent={accent} ink={ink} site={site} step={step} pack={pack} />
@@ -1122,4 +1086,38 @@ export function EmployeeContent({ id, accent, ink, site, step = 0, pack }) {
     case 'conteudo': return <CriadorDeConteudo accent={accent} ink={ink} step={step} pack={pack} />
     default: return null
   }
+}
+
+// ── Roteador de conteúdo por funcionário + esteira + contador ─────────
+export function EmployeeContent({ id, accent, ink, site, step = 0, pack, onOpenAgent }) {
+  const save = SAVE[id]
+  // ao entregar o 1º artefato (step>=1), credita a economia do agente (1×)
+  const produced = step >= 1
+  React.useEffect(() => {
+    if (produced && save) recordArtifact(id, save.money, save.hours)
+  }, [produced, id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const i = EMPLOYEES.findIndex((e) => e.id === id)
+  const next = i >= 0 && i < EMPLOYEES.length - 1 ? EMPLOYEES[i + 1] : null
+  const nextLabel = next ? next.name.replace(/^O\s+/, '') : ''
+
+  const panel = agentPanel({ id, accent, ink, site, step, pack })
+  if (!panel) return null
+
+  return (
+    <>
+      {panel}
+      <div className="emp-foot" style={{ '--accent': accent, '--accent-ink': ink }}>
+        <SavingsBar eq={save?.eq} />
+        {next && onOpenAgent && (
+          <div className="esteira">
+            <button className="esteira__send" onClick={() => onOpenAgent(next.id)}>
+              Enviar pro {nextLabel} →
+            </button>
+            <span className="esteira__note">Não são 5 chats: é uma esteira. Um alimenta o próximo.</span>
+          </div>
+        )}
+      </div>
+    </>
+  )
 }

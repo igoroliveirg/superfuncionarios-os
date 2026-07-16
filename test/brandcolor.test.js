@@ -30,6 +30,12 @@ describe('extractBrandColor', () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('net'))
     expect(await extractBrandColor('x.com')).toBeNull()
   })
+  it('site anti-bot: fetch direto falha, cai no Jina e lê a cor', async () => {
+    global.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('403 anti-bot')) // fetchDirect
+      .mockResolvedValueOnce(htmlRes('<meta name="theme-color" content="#7c3aed">')) // fetchViaJina
+    expect(await extractBrandColor('zuppy.com.br')).toBe('#7c3aed')
+  })
 })
 
 describe('extractBrandStyle (tema claro/escuro)', () => {

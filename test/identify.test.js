@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const h = vi.hoisted(() => ({ state: { niche: 'clinicas', empresa: 'Clínica Bem', color: '#820ad1', theme: 'light' } }))
+const h = vi.hoisted(() => ({ state: { niche: 'clinicas', empresa: 'Clínica Bem', color: '#820ad1', theme: 'light', guess: '#ff6f91' } }))
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class {
@@ -9,7 +9,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
         content: [{
           type: 'tool_use', name: 'identify', input: {
             niche: h.state.niche, empresa: h.state.empresa, oferta: 'protocolo facial',
-            primaryColor: '#ff6f91', segmento: 'estética', confidence: 0.9,
+            primaryColor: h.state.guess, segmento: 'estética', confidence: 0.9,
           },
         }],
       }),
@@ -24,12 +24,12 @@ vi.mock('../server/render.mjs', () => ({ renderStyle: vi.fn().mockResolvedValue(
 import { identify } from '../server/identify.mjs'
 
 describe('identify', () => {
-  beforeEach(() => { h.state.niche = 'clinicas'; h.state.empresa = 'Clínica Bem'; h.state.color = '#820ad1'; h.state.theme = 'light' })
+  beforeEach(() => { h.state.niche = 'clinicas'; h.state.empresa = 'Clínica Bem'; h.state.color = '#820ad1'; h.state.theme = 'light'; h.state.guess = '#ff6f91' })
   it('devolve nicho + empresa do tool_use; cor + tema = os REAIS extraídos do site', async () => {
     const out = await identify('clinicabem.com.br')
     expect(out.niche).toBe('clinicas')
     expect(out.empresa).toBe('Clínica Bem')
-    expect(out.primaryColor).toBe('#820ad1') // cor extraída, NÃO o chute #ff6f91 do modelo
+    expect(out.primaryColor).toBe('#820ad1') // cor REAL extraída vence o chute do modelo
     expect(out.theme).toBe('light')          // tema segue o site do cliente
   })
   it('nicho fora da lista cai para generico', async () => {
@@ -42,8 +42,14 @@ describe('identify', () => {
     const out = await identify('x.com')
     expect(out.empresa).toBe('')
   })
-  it('sem cor extraída → primaryColor vazio (landing usa accent do nicho, nunca chute)', async () => {
+  it('site blindado (sem cor extraída) → usa o chute VALIDADO do modelo como último recurso', async () => {
+    h.state.color = null // render + heurístico falharam (anti-bot)
+    const out = await identify('x.com')
+    expect(out.primaryColor).toBe('#ff6f91') // chute saturado do modelo, melhor que accent genérico
+  })
+  it('sem cor extraída E chute do modelo neutro/inválido → primaryColor vazio (accent do nicho)', async () => {
     h.state.color = null
+    h.state.guess = '#f4f4f4' // quase-branco → validBrandHex rejeita
     const out = await identify('x.com')
     expect(out.primaryColor).toBe('')
   })

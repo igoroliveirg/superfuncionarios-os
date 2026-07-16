@@ -3,6 +3,8 @@
 
 const normalize = (u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`)
 const NAMED = { white: '#ffffff', black: '#000000' }
+// UA de navegador real: "SFOS-bot" era barrado por anti-bot antes de ler a cor
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
 
 function toHex(str) {
   if (!str) return null
@@ -27,19 +29,40 @@ const isNeutral = (hex) => { const [s, l] = hsl(hex); return s < 0.2 || l > 0.92
 
 function absolutize(href, base) { try { return new URL(href, base).href } catch { return null } }
 
+// fetch direto com UA de navegador real
+async function fetchDirect(target) {
+  try {
+    const r = await fetch(target, { headers: { 'User-Agent': UA } })
+    if (r.ok === false) return null // 4xx/5xx (ex.: 403 anti-bot) → tenta Jina
+    const html = await r.text()
+    return html && html.trim() ? html : null
+  } catch { return null }
+}
+
+// fallback anti-bot: Jina Reader renderiza server-side e devolve o HTML (passa
+// por bloqueios que barram fetch/chromium; foi assim que pegamos o texto do site)
+async function fetchViaJina(target) {
+  try {
+    const headers = { 'X-Return-Format': 'html' }
+    if (process.env.JINA_API_KEY) headers.Authorization = `Bearer ${process.env.JINA_API_KEY}`
+    const r = await fetch(`https://r.jina.ai/${target}`, { headers })
+    if (r.ok === false) return null
+    const html = await r.text()
+    return html && html.trim() ? html : null
+  } catch { return null }
+}
+
 async function load(url) {
   const target = normalize(url)
-  let html = ''
-  try {
-    const r = await fetch(target, { headers: { 'User-Agent': 'Mozilla/5.0 SFOS-bot' } })
-    html = await r.text()
-  } catch { return null }
+  let html = await fetchDirect(target)
+  if (!html) html = await fetchViaJina(target) // site anti-bot → tenta via Jina
+  if (!html) return null
   let css = html
   const links = [...html.matchAll(/<link[^>]+rel=["']stylesheet["'][^>]*href=["']([^"']+)["']/gi)].slice(0, 1)
   for (const m of links) {
     const href = absolutize(m[1], target)
     if (!href) continue
-    try { const r = await fetch(href); css += '\n' + await r.text() } catch { /* ignora */ }
+    try { const r = await fetch(href, { headers: { 'User-Agent': UA } }); css += '\n' + await r.text() } catch { /* ignora */ }
   }
   return { target, html, css }
 }

@@ -60,3 +60,35 @@ Pra sites que a auto-detecção não pega (raros, blindados):
 - Integrações reais Meta/GA/CRM (hoje mockup crível, proposital).
 - Persistência (Supabase) se virar produto, não só ferramenta de sala.
 - Conectar o repo na Vercel p/ deploy automático.
+
+## Chat ao vivo + imagem real (jul/2026)
+
+Duas camadas novas por cima da demo, ambas **aditivas e com queda suave** (sem chave, sem rede ou com `#noimg` cai no criativo CSS de hoje; a demo nunca trava):
+
+- **Imagem real nos criativos e posts.** Os criativos do Construtor (story 9:16 + feed 1:1) e o post herói do Criador viram imagem gerada de verdade pelo `gpt-image-2` (OpenAI), ancorada em nicho + oferta + cor da marca. Imagem **pura, sem texto nos pixels**; a copy fica em legenda. Pré-geradas no "Analisando" (3 imagens: feed, story, post) e sobrepostas no pack sem tocar nos arrays.
+- **Modo Conversa.** Toggle **Demo / Conversa** no header do chat, nos 5 funcionários. Em Conversa você digita e fala de verdade com o funcionário (Claude **Sonnet**, `claude-sonnet-5`). Construtor e Criador têm a ferramenta `gerar_imagem`: peça um criativo e ele gera na hora (balão de imagem com "gerado agora").
+
+**Backend novo:** `server/image.mjs` (gpt-image-2) e `server/chat.mjs` (loop do Claude + tool), expostos por `/api/image` e `/api/chat` (middleware do Vite + funções Vercel `api/image.js`/`api/chat.js`). São relays puros, rodam no serverless da Vercel.
+
+**Chave:** `OPENAI_API_KEY` no `.env` (server-side, sem `VITE_`). Reusa `ANTHROPIC_API_KEY` no chat.
+
+**Overrides de palco:** `#noimg` desliga toda geração de imagem; `#hq` sobe a qualidade pra `high` (padrão `medium`, ~3 centavos/imagem). Cap de imagens por sessão em `server/image.mjs` (`SFOS_IMAGE_CAP`, default 40).
+
+**Custo/latência:** `medium` na demo (~3 centavos, mais rápido). Sem streaming: o loop de ferramenta roda inteiro no servidor e a UI simula digitação com o `<Typewriter>`.
+
+**Testes:** +12 (image + chat), suíte em 78 no total. `npm run test` verde, `npm run build` limpo.
+
+**Spec/plano:** `docs/superpowers/specs/2026-07-13-chat-ao-vivo-e-imagem-real-design.md` e `docs/superpowers/plans/2026-07-13-chat-ao-vivo-e-imagem-real.md`.
+
+## Ajustes v2 (jul/2026, tarde)
+
+Seis mudanças pedidas pelo Igor, todas verificadas rodando:
+
+1. **Anúncio com texto POR CIMA da imagem** (nunca imagem pura). A foto do `gpt-image-2` vira fundo com scrim; a copy fica sobreposta. Vale nos criativos do Construtor e no balão do chat (a tool `gerar_imagem` agora exige `headline`).
+2. **Construtor virou "Construtor de Anúncios":** removidos o vídeo e a página de venda. Só os criativos. `pack.construtor` mantém os dados antigos (resolve.test usa `hero`); código morto do page-builder (`VideoArtifact` etc.) ficou sem uso, dá pra limpar.
+3. **Abre direto no 1º agente (Pesquisa)**, não no hub. Fechar a janela revela o hub.
+4. **Configurações + criar agente** (engrenagem no chrome): escolhe 1 de 5 fotos pré-definidas (`public/avatars/a1..a5.png`, robôs no estilo da casa), nomeia, descreve o papel. O agente entra no launcher e abre conversável na hora (Claude Sonnet, descrição = system prompt). Só na sessão (sem persistência).
+5. **Conversa vira visual no painel central.** Tool `mostrar_no_painel` (persona / lista / barras / tabela / kpis) em todos os agentes: a IA escolhe o formato e o resultado renderiza na tela central (não só texto no chat). `ChatPanel` passou a receber `mode`/`live` do pai (Window/CustomAgentWindow); `LivePanels` renderiza os specs.
+6. **Tudo ancorado no site** segue como alicerce (imagem, chat, agentes recebem nicho/empresa/oferta/cor).
+
+Testes: 80 no total. Novas fotos em `public/avatars/`. Overrides de palco: `#noimg`, `#hq` (imagem); `#niche`, `#theme`, `#color` (identidade).

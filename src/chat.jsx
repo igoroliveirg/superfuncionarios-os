@@ -403,6 +403,44 @@ export function useAgentChat(script) {
 }
 
 // ════════════════════════════════════════════════════════════════════
+//  MOTOR DA CONVERSA AO VIVO · useLiveChat
+//  Manda o texto pro /api/chat (Claude Sonnet) e recebe { text, images }.
+//  Papel 'image' = balão com a imagem gerada. Histórico no formato Anthropic.
+// ════════════════════════════════════════════════════════════════════
+export function useLiveChat({ empId, siteCtx, pack, greeting, desc = '' }) {
+  const [messages, setMessages] = useState(() => [{ id: 0, role: 'agent', text: greeting || 'Oi. Como posso ajudar?', streaming: false }])
+  const [panels, setPanels] = useState([]) // artefatos visuais que a IA mandou pro painel central
+  const [busy, setBusy] = useState(false)
+  const seq = useRef(1)
+  const histRef = useRef([]) // [{ role:'user'|'assistant', content:string }]
+
+  const send = useCallback(async (text) => {
+    const t = (text || '').trim()
+    if (!t || busy) return
+    const uid = seq.current++
+    setMessages((m) => [...m, { id: uid, role: 'user', text: t }])
+    setBusy(true)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ empId, history: histRef.current, userText: t, vars: siteCtx, pack, desc }),
+      }).then((r) => r.json())
+      const reply = res.text || 'Feito.'
+      histRef.current = [...histRef.current, { role: 'user', content: t }, { role: 'assistant', content: reply }].slice(-12)
+      setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: reply, streaming: true }])
+      ;(res.images || []).forEach((img) => setMessages((m) => [...m, { id: seq.current++, role: 'image', img }]))
+      ;(res.panels || []).forEach((spec) => setPanels((p) => [...p, { id: seq.current++, spec }]))
+    } catch {
+      setMessages((m) => [...m, { id: seq.current++, role: 'agent', text: 'Não consegui responder agora. Tenta de novo?', streaming: false }])
+    } finally {
+      setBusy(false)
+    }
+  }, [empId, siteCtx, pack, busy, desc])
+
+  return { messages, panels, busy, send }
+}
+
+// ════════════════════════════════════════════════════════════════════
 //  ConnectCard · card de integração inline (estilo OAuth) dentro do chat
 //  contrato connect: { prompt, items:[ {id,label,mono,color}
 //                       | {id,label,options:[{id,label,mono,color}]} ] }
@@ -486,28 +524,59 @@ function ConnectCard({ connect, active, onConnected }) {
   )
 }
 
+// motor de produção visível (Onda 2): ferramentas que "rodam" enquanto o agente
+// pensa — nomeia o trabalho real (HeyGen, ElevenLabs, cruzando reviews…).
+const PRODUCE_STEPS = {
+  pesquisa: ['lendo o site', 'cruzando reviews e concorrentes', 'extraindo dores reais', 'rankeando ângulos'],
+  copywriter: ['lendo a pesquisa', 'escrevendo 4 ângulos', 'prevendo o CTR', 'montando o formulário'],
+  construtor: ['aplicando a copy', 'gerando os designs', 'avatar HeyGen + voz ElevenLabs', 'legenda e corte ffmpeg'],
+  conteudo: ['lendo os pilares', 'gerando ganchos', 'montando o calendário', 'escrevendo o roteiro'],
+  metricas: ['conectando pixel e CRM', 'montando o funil', 'calculando CAC e ROAS', 'achando onde vaza'],
+}
+function ProduceLog({ id }) {
+  const steps = PRODUCE_STEPS[id] || []
+  const [i, setI] = useState(0)
+  useEffect(() => {
+    if (!steps.length || prefersReduced()) return
+    const t = setInterval(() => setI((v) => (v + 1) % steps.length), 480)
+    return () => clearInterval(t)
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!steps.length) return null
+  return <span className="produce-log">▸ {steps[i]}…</span>
+}
+
 // ════════════════════════════════════════════════════════════════════
 //  ChatPanel · painel de vidro flutuante à direita
 // ════════════════════════════════════════════════════════════════════
-export function ChatPanel({ emp, chat, nextAgent, onNext }) {
+// `mode`/`setMode` e `live` (useLiveChat) vêm do pai (Window), pra que o painel
+// CENTRAL também reaja à conversa (os visuais que a IA manda pra tela).
+export function ChatPanel({ emp, chat, nextAgent, onNext, live, mode, setMode, liveOnly = false }) {
   const { messages, thinking, chips, pickChip, streamingId, onStreamDone, pendingConnectId, onConnected } = chat
   const zoom = useContext(ZoomCtx)
   const scrollRef = useRef(null)
   const chipRef = useRef(null)
+  const inputRef = useRef(null)
   const prevStream = useRef(null)
   const [announce, setAnnounce] = useState('') // região sr-only que anuncia a resposta pronta
+  const [draft, setDraft] = useState('')
 
-  // pula pro fim quando entra msg/thinking
+  // qual conjunto está na tela agora
+  const isLive = liveOnly || mode === 'live'
+  const viewMessages = isLive ? live.messages : messages
+  const viewStreamingId = isLive ? null : streamingId
+  const viewOnStreamDone = isLive ? undefined : onStreamDone
+  const viewPendingConnectId = isLive ? null : pendingConnectId
+  const viewThinking = isLive ? live.busy : thinking
+
+  // pula pro fim quando entra msg/atividade
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages.length, thinking, streamingId])
+  }, [viewMessages.length, viewThinking, viewStreamingId])
 
-  // acompanha o texto crescendo durante o streaming (sem isso, o caret some da dobra).
-  // Em Modo demo o texto sai inteiro (sem char-a-char), então o loop de rAF só
-  // competiria com o vsync do encoder nos holds: o scrollTo único acima já basta.
+  // acompanha o texto crescendo durante o streaming do demo (caret na dobra)
   useEffect(() => {
-    if (!streamingId || prefersReduced() || zoom) return
+    if (isLive || !streamingId || prefersReduced() || zoom) return
     let raf = 0
     const loop = () => {
       const el = scrollRef.current
@@ -516,17 +585,26 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [streamingId, zoom])
+  }, [streamingId, zoom, isLive])
 
-  // ao terminar uma resposta: foca o próximo chip (teclado) + anuncia a resposta (leitor)
+  // ao terminar uma resposta do demo: foca o próximo chip + anuncia (leitor)
   useEffect(() => {
     if (prevStream.current && !streamingId) {
       const lastAgent = [...messages].reverse().find((m) => m.role === 'agent')
       if (lastAgent) setAnnounce(lastAgent.text)
-      requestAnimationFrame(() => chipRef.current?.focus())
+      if (!isLive) requestAnimationFrame(() => chipRef.current?.focus())
     }
     prevStream.current = streamingId
   }, [streamingId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = (e) => {
+    e.preventDefault()
+    const t = draft.trim()
+    if (!t) return
+    setDraft('')
+    live.send(t)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
 
   return (
     <aside
@@ -540,57 +618,159 @@ export function ChatPanel({ emp, chat, nextAgent, onNext }) {
           <strong>{emp.name}</strong>
           <span className="chat-status" aria-live="polite">
             <i className="chat-dot" style={{ background: emp.color }} aria-hidden="true" />
-            {thinking ? 'pensando…' : streamingId ? 'digitando…' : pendingConnectId ? 'aguardando conexão…' : 'online'}
+            {viewThinking ? 'pensando…' : viewStreamingId ? 'digitando…' : viewPendingConnectId ? 'aguardando conexão…' : 'online'}
           </span>
         </div>
+        {!liveOnly && (
+          <div className="chat-mode" role="tablist" aria-label="Modo do chat">
+            <button role="tab" type="button" aria-selected={!isLive} className={`cm-tab ${!isLive ? 'on' : ''}`} onClick={() => setMode('demo')}>Demo</button>
+            <button role="tab" type="button" aria-selected={isLive} className={`cm-tab ${isLive ? 'on' : ''}`} onClick={() => setMode('live')}>Conversa</button>
+          </div>
+        )}
       </header>
 
       <div className="chat-log" ref={scrollRef} role="log" aria-label="Conversa">
-        {messages.map((m) => (
-          m.role === 'connect'
-            ? <ConnectCard key={m.id} connect={m.connect} active={m.id === pendingConnectId} onConnected={onConnected} />
-            : (
-              <div key={m.id} className={`bubble ${m.role} reveal`}>
-                {m.role === 'agent' && m.streaming
-                  ? <Typewriter text={m.text} className="bubble-tx" onDone={m.id === streamingId ? onStreamDone : undefined} />
-                  : <span className="bubble-tx">{m.text}</span>}
+        {viewMessages.map((m) => {
+          if (m.role === 'connect') return <ConnectCard key={m.id} connect={m.connect} active={m.id === viewPendingConnectId} onConnected={onConnected} />
+          if (m.role === 'image') return (
+            <figure key={m.id} className="bubble agent img-bubble reveal">
+              <div className="ib-frame">
+                <img src={`data:image/png;base64,${m.img.b64}`} alt={m.img.alt || 'Imagem gerada'} />
+                {m.img.headline && <span className="ib-headline">{m.img.headline}</span>}
               </div>
-            )
-        ))}
-        {thinking && (
+              <figcaption>gerado agora · {m.img.format}</figcaption>
+            </figure>
+          )
+          return (
+            <div key={m.id} className={`bubble ${m.role} reveal`}>
+              {m.role === 'agent' && m.streaming
+                ? <Typewriter text={m.text} className="bubble-tx" onDone={m.id === viewStreamingId ? viewOnStreamDone : undefined} />
+                : <span className="bubble-tx">{m.text}</span>}
+            </div>
+          )
+        })}
+        {viewThinking && (
           <div className="bubble agent thinking reveal" aria-hidden="true">
             <span className="dots"><i /><i /><i /></span>
+            {isLive ? <span className="produce-log">▸ pensando…</span> : <ProduceLog id={emp.id} />}
           </div>
         )}
       </div>
 
-      <div className="chat-chips">
-        {chips.length === 0 && !thinking && !streamingId && !pendingConnectId && (
-          <>
-            <p className="chat-end" role="status">
-              {nextAgent ? 'Demonstração concluída.' : 'Fim do fluxo, seus 5 funcionários trabalharam de ponta a ponta.'}
-            </p>
-            {nextAgent && onNext && (
-              <button
-                ref={chipRef}
-                className="chip chip-next"
-                style={{ '--accent': nextAgent.color, '--accent-ink': nextAgent.ink }}
-                onClick={onNext}
-              >
-                <img src={nextAgent.img} alt="" className="chip-next-av" />
-                Falar com {nextAgent.name} →
-              </button>
-            )}
-          </>
-        )}
-        {chips.map((c, i) => (
-          <button key={c.id} ref={i === 0 ? chipRef : undefined} className="chip" onClick={pickChip} disabled={thinking || !!streamingId}>
-            {c.label}
-          </button>
-        ))}
-      </div>
+      {isLive ? (
+        <form className="chat-input" onSubmit={submit}>
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder={`Fale com ${emp.name}…`}
+            disabled={live.busy}
+            aria-label={`Mensagem para ${emp.name}`}
+            spellCheck={false}
+          />
+          <button type="submit" disabled={live.busy || !draft.trim()} aria-label="Enviar">↑</button>
+        </form>
+      ) : (
+        <div className="chat-chips">
+          {chips.length === 0 && !thinking && !streamingId && !pendingConnectId && (
+            <>
+              <p className="chat-end" role="status">
+                {nextAgent ? 'Demonstração concluída.' : 'Fim do fluxo, seus 5 funcionários trabalharam de ponta a ponta.'}
+              </p>
+              {nextAgent && onNext && (
+                <button
+                  ref={chipRef}
+                  className="chip chip-next"
+                  style={{ '--accent': nextAgent.color, '--accent-ink': nextAgent.ink }}
+                  onClick={onNext}
+                >
+                  <img src={nextAgent.img} alt="" className="chip-next-av" />
+                  Falar com {nextAgent.name} →
+                </button>
+              )}
+            </>
+          )}
+          {chips.map((c, i) => (
+            <button key={c.id} ref={i === 0 ? chipRef : undefined} className="chip" onClick={pickChip} disabled={thinking || !!streamingId}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <p className="sr-only" role="status" aria-live="polite">{announce}</p>
     </aside>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  LivePanels · renderiza os visuais que a IA mandou pro painel central
+//  (tipo escolhido pela IA: persona / lista / barras / tabela / kpis)
+// ════════════════════════════════════════════════════════════════════
+export function LivePanels({ panels = [], accent, ink }) {
+  if (!panels.length) return null
+  return (
+    <div className="live-panels">
+      {panels.map((p) => <LivePanel key={p.id} spec={p.spec} accent={accent} ink={ink} />)}
+    </div>
+  )
+}
+
+function LivePanel({ spec, accent, ink }) {
+  const { tipo, titulo } = spec || {}
+  const pct = (n) => Math.max(0, Math.min(100, Number(n) || 0))
+  return (
+    <section className="lp-card reveal" style={{ '--accent': accent, '--accent-ink': ink }}>
+      {titulo && <h3 className="lp-card-title">{titulo}</h3>}
+
+      {tipo === 'kpis' && (
+        <div className="lp-kpis">
+          {(spec.kpis || []).map((k, i) => (
+            <div key={i} className="lp-kpi"><b style={{ color: ink }}>{k.valor}</b><span>{k.label}</span></div>
+          ))}
+        </div>
+      )}
+
+      {tipo === 'lista' && (
+        <ul className="lp-list">
+          {(spec.itens || []).map((t, i) => <li key={i}><span className="lp-dot" style={{ background: accent }} aria-hidden="true" />{t}</li>)}
+        </ul>
+      )}
+
+      {tipo === 'barras' && (
+        <div className="lp-bars2">
+          {(spec.barras || []).map((b, i) => (
+            <div key={i} className="lp-bar2">
+              <div className="lp-bar2-top"><span>{b.label}</span>{b.valor != null && <b style={{ color: ink }}>{b.valor}</b>}</div>
+              <div className="lp-bar2-track"><span className="lp-bar2-fill" style={{ width: `${pct(b.pct)}%`, background: accent }} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tipo === 'tabela' && (
+        <div className="lp-table-wrap">
+          <table className="lp-table">
+            {spec.colunas && <thead><tr>{spec.colunas.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>}
+            <tbody>{(spec.linhas || []).map((row, i) => <tr key={i}>{(row || []).map((cell, j) => <td key={j}>{cell}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      )}
+
+      {tipo === 'persona' && spec.persona && (
+        <div className="lp-persona">
+          <div className="lp-persona-head">
+            <span className="lp-persona-av" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}66)` }}>{(spec.persona.nome || '?').charAt(0)}</span>
+            <div className="lp-persona-id"><b>{spec.persona.nome}</b><span className="muted">{spec.persona.contexto}</span></div>
+          </div>
+          {spec.persona.traits?.length > 0 && (
+            <div className="lp-tags">{spec.persona.traits.map((t, i) => <span key={i} className="lp-tag" style={{ borderColor: accent, color: ink }}>{t}</span>)}</div>
+          )}
+          {spec.persona.dores?.length > 0 && (
+            <ul className="lp-list">{spec.persona.dores.map((d, i) => <li key={i}><span className="lp-dot" style={{ background: accent }} aria-hidden="true" />{d}</li>)}</ul>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

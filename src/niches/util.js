@@ -12,6 +12,32 @@ export function deepMerge(base, over) {
   return out
 }
 
+// Funde o pack gerado pela IA (gen) por cima do pack base já resolvido.
+// Painéis: deepMerge normal (arrays do gen substituem). scripts: merge por
+// ÍNDICE de turn (só greeting/chip/reply), preservando os blocos `connect` e a
+// estrutura do roteiro base — assim a UI nunca perde as integrações.
+export function mergePack(base, gen) {
+  if (!gen || typeof gen !== 'object') return base
+  const { scripts: genScripts, _error, ...panels } = gen
+  const out = deepMerge(base, panels)
+  if (genScripts && base.scripts) {
+    out.scripts = structuredClone(base.scripts)
+    for (const id of Object.keys(genScripts)) {
+      const g = genScripts[id], b = out.scripts[id]
+      if (!b) continue
+      if (g.greeting) b.greeting = g.greeting
+      if (Array.isArray(g.turns)) {
+        g.turns.forEach((t, i) => {
+          if (!b.turns?.[i] || !t) return
+          if (t.chip) b.turns[i].chip = t.chip
+          if (t.reply) b.turns[i].reply = t.reply
+        })
+      }
+    }
+  }
+  return out
+}
+
 // substitui {empresa}/{oferta}/{cor}/{primaryColor}/etc em qualquer string
 // (recursivo); preserva não-strings. {cor} é alias de primaryColor.
 export function interpolate(node, vars) {

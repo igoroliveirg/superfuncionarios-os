@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deepMerge, interpolate } from '../src/niches/util.js'
+import { deepMerge, interpolate, mergePack } from '../src/niches/util.js'
 
 describe('deepMerge', () => {
   it('mescla objetos recursivamente', () => {
@@ -33,5 +33,52 @@ describe('interpolate', () => {
   })
   it('token sem valor vira string vazia', () => {
     expect(interpolate({ x: 'a{inexistente}b' }, vars)).toEqual({ x: 'ab' })
+  })
+})
+
+describe('mergePack', () => {
+  // base mínimo no formato real: painéis + scripts com bloco connect preservável
+  const base = () => ({
+    pesquisa: { persona: { nome: 'Ricardo', idade: 43, contexto: 'SP' }, dores: ['a', 'b'] },
+    metricas: { FUNNEL: [1, 2, 3] },
+    scripts: {
+      construtor: {
+        greeting: 'oi base',
+        turns: [
+          { chip: 'x', reply: 'r0base' },
+          { chip: 'pub', reply: 'r1base', connect: { prompt: 'ligar CRM', items: [1, 2] } },
+        ],
+      },
+    },
+  })
+
+  it('personaliza campos do painel e herda o resto do molde', () => {
+    const out = mergePack(base(), { pesquisa: { persona: { nome: 'Marina' }, dores: ['x', 'y', 'z'] } })
+    expect(out.pesquisa.persona.nome).toBe('Marina')
+    expect(out.pesquisa.persona.contexto).toBe('SP')  // herdado
+    expect(out.pesquisa.persona.idade).toBe(43)       // herdado
+    expect(out.pesquisa.dores).toEqual(['x', 'y', 'z']) // array substitui
+  })
+
+  it('sobrescreve greeting/chip/reply por índice e PRESERVA o bloco connect', () => {
+    const gen = { scripts: { construtor: { greeting: 'oi nubank', turns: [{ reply: 'r0novo' }, { reply: 'r1novo' }] } } }
+    const out = mergePack(base(), gen)
+    expect(out.scripts.construtor.greeting).toBe('oi nubank')
+    expect(out.scripts.construtor.turns[0].reply).toBe('r0novo')
+    expect(out.scripts.construtor.turns[1].reply).toBe('r1novo')
+    expect(out.scripts.construtor.turns[1].connect).toEqual({ prompt: 'ligar CRM', items: [1, 2] }) // preservado
+    expect(out.scripts.construtor.turns[1].chip).toBe('pub') // chip não enviado → herdado
+  })
+
+  it('ignora _error e não muta o base', () => {
+    const b = base()
+    const out = mergePack(b, { _error: 'falhou', pesquisa: { persona: { nome: 'Z' } } })
+    expect(out._error).toBeUndefined()
+    expect(out.pesquisa.persona.nome).toBe('Z')
+    expect(b.pesquisa.persona.nome).toBe('Ricardo') // base intacto
+  })
+
+  it('gen nulo/indefinido devolve o base', () => {
+    expect(mergePack(base(), null).pesquisa.persona.nome).toBe('Ricardo')
   })
 })
