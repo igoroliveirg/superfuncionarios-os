@@ -62,6 +62,18 @@ export const IMAGE_TOOL = {
   },
 }
 
+// 429 (rate limit) e 5xx/529 (overloaded) da Anthropic são transitórios:
+// uma segunda tentativa resolve a maioria sem o usuário ver erro.
+export async function createWithRetry(client, params, waitMs = 1200) {
+  try {
+    return await client.messages.create(params)
+  } catch (e) {
+    if (e?.status !== 429 && !(e?.status >= 500)) throw e
+    await new Promise((r) => setTimeout(r, waitMs))
+    return client.messages.create(params)
+  }
+}
+
 export function truncate(history, n = 12) {
   return history.length <= n ? history : history.slice(history.length - n)
 }
@@ -94,7 +106,7 @@ export async function chatTurn({ empId, history = [], userText, vars = {}, pack 
   let text = ''
 
   for (let round = 0; round < MAX_ROUNDS; round++) {
-    const res = await client.messages.create({ model: MODEL, max_tokens: 1536, system, tools, messages })
+    const res = await createWithRetry(client, { model: MODEL, max_tokens: 1536, system, tools, messages })
     const toolUses = res.content.filter((b) => b.type === 'tool_use')
     text = res.content.filter((b) => b.type === 'text').map((b) => b.text).join(' ').trim() || text
     if (!toolUses.length || res.stop_reason !== 'tool_use') break
